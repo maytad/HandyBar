@@ -6,6 +6,7 @@ import SwiftUI
 final class StatusItemController: NSObject, NSPopoverDelegate {
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     private let popover = NSPopover()
+    private var toggle = PanelToggle()
 
     override init() {
         super.init()
@@ -24,21 +25,35 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     }
 
     @objc private func togglePopover(_ sender: NSStatusBarButton) {
-        if popover.isShown {
-            popover.performClose(sender)
-            return
+        perform(toggle.click())
+    }
+
+    private func perform(_ command: PanelToggle.Command) {
+        switch command {
+        case .show: showPopover()
+        case .close: popover.performClose(nil)
+        case .none: break
         }
+    }
+
+    private func showPopover() {
+        guard let button = statusItem.button else { return }
         let hostingController = NSHostingController(
             rootView: PanelView(onQuit: { NSApp.terminate(nil) })
         )
         hostingController.sizingOptions = .preferredContentSize
         popover.contentViewController = hostingController
-        popover.show(relativeTo: sender.bounds, of: sender, preferredEdge: .minY)
+        popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         NSApp.activate()
+    }
+
+    func popoverWillClose(_ notification: Notification) {
+        toggle.willClose()
     }
 
     func popoverDidClose(_ notification: Notification) {
         // Release the SwiftUI hierarchy so a closed panel holds no view state.
         popover.contentViewController = nil
+        perform(toggle.didClose())
     }
 }
