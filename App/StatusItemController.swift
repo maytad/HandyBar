@@ -43,8 +43,16 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         )
         hostingController.sizingOptions = .preferredContentSize
         popover.contentViewController = hostingController
+        popover.animates = true
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         NSApp.activate()
+    }
+
+    func popoverShouldClose(_ popover: NSPopover) -> Bool {
+        // Close instantly, like a menu: the close animation outlasts rapid clicks
+        // on the menu bar item, which would otherwise land on a closing panel.
+        popover.animates = false
+        return true
     }
 
     func popoverWillClose(_ notification: Notification) {
