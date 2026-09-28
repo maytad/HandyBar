@@ -14,10 +14,23 @@ from logs or screenshots. Follow [SECURITY.md](SECURITY.md) for vulnerabilities.
 
 ## Development and verification
 
-There is no app project, build command, or test suite yet. The implementation
-stack and minimum macOS version are still being decided.
-The first implementation should document its prerequisites and exact build/test
-commands here, including how to run locally without the maintainer's credentials.
+There is no app project, build command, or test suite yet. The first
+implementation is a walking skeleton with the planned shape below; it must
+replace this plan with exact prerequisites and build/test commands, including
+how to run locally without the maintainer's credentials.
+
+- Target: macOS 14 or later, Apple silicon (`arm64`) only, App Sandbox off.
+- Layout: an Xcode project for the app target only, with feature code in a local
+  Swift package (`Packages/HandyBarKit`) using Swift 6 language mode.
+  `HandyBarAlarm`, `HandyBarAutoClick`, and `HandyBarCleanup` do not depend on
+  each other or import SwiftUI; `HandyBarUI` holds the SwiftUI panels.
+- Checks: Swift Testing for tests and `swift-format` for formatting, run in CI on
+  every pull request.
+- Packaging: `scripts/build-dmg.sh` builds the DMG. It signs with the maintainer's
+  self-signed certificate when available and falls back to ad-hoc signing.
+- Performance: `scripts/measure-idle.sh` records idle memory and CPU. Record the
+  baseline here and compare against it when a change affects idle behavior.
+- Versions: SemVer tags `vX.Y.Z`, starting at `v0.1.0`; pushing a tag builds a release.
 
 For documentation changes, check relative links, keep proposed behavior distinct
 from implemented behavior, and check the diff for accidental changes.
