@@ -1,7 +1,7 @@
 # Contributing to HandyBar
 
-HandyBar is in the planning stage. Contributions currently focus on clarifying
-the three features in the [README](README.md): Alarm, Auto Click, and Cleanup.
+HandyBar is in early development. Contributions currently focus on clarifying
+and building the three features in the [README](README.md): Alarm, Auto Click, and Cleanup.
 Discuss scope changes in a GitHub issue before implementing additional features.
 
 ## Propose a change
@@ -14,23 +14,58 @@ from logs or screenshots. Follow [SECURITY.md](SECURITY.md) for vulnerabilities.
 
 ## Development and verification
 
-There is no app project, build command, or test suite yet. The first
-implementation is a walking skeleton with the planned shape below; it must
-replace this plan with exact prerequisites and build/test commands, including
-how to run locally without the maintainer's credentials.
+### Prerequisites
 
-- Target: macOS 14 or later, Apple silicon (`arm64`) only, App Sandbox off.
-- Layout: an Xcode project for the app target only, with feature code in a local
-  Swift package (`Packages/HandyBarKit`) using Swift 6 language mode.
-  `HandyBarAlarm`, `HandyBarAutoClick`, and `HandyBarCleanup` do not depend on
-  each other or import SwiftUI; `HandyBarUI` holds the SwiftUI panels.
-- Checks: Swift Testing for tests and `swift-format` for formatting, run in CI on
-  every pull request.
-- Packaging: `scripts/build-dmg.sh` builds the DMG. It signs with the maintainer's
-  self-signed certificate when available and falls back to ad-hoc signing.
-- Performance: `scripts/measure-idle.sh` records idle memory and CPU. Record the
-  baseline here and compare against it when a change affects idle behavior.
-- Versions: SemVer tags `vX.Y.Z`, starting at `v0.1.0`; pushing a tag builds a release.
+- An Apple silicon Mac with macOS 14 or later.
+- Xcode 26 or later (CI uses Xcode 26.6). No Apple Developer account, signing
+  certificate, or extra tools are needed; local builds are ad-hoc signed.
+
+### Layout
+
+- `HandyBar.xcodeproj`: the app target only. macOS 14, `arm64`, App Sandbox off,
+  Hardened Runtime on, no Dock icon. Files added under `App/` join the target
+  automatically.
+- `App/`: AppKit lifecycle and the menu bar item.
+- `Packages/HandyBarKit`: Swift package in Swift 6 language mode.
+  `HandyBarAlarm`, `HandyBarAutoClick`, and `HandyBarCleanup` hold feature logic and
+  must not import SwiftUI, AppKit, or each other; `HandyBarUI` holds the SwiftUI panels.
+
+### Checks
+
+Run these before opening a pull request; CI runs the same on every pull request.
+
+```sh
+xcrun swift-format lint --strict --recursive App Packages
+scripts/check-feature-imports.sh
+swift test --package-path Packages/HandyBarKit
+xcodebuild -project HandyBar.xcodeproj -scheme HandyBar -derivedDataPath build/DerivedData build
+```
+
+Fix formatting with `xcrun swift-format format --in-place --recursive App Packages`.
+Write tests with Swift Testing. Open `HandyBar.xcodeproj` in Xcode to run the app.
+
+### Packaging and idle baseline
+
+`scripts/build-dmg.sh` builds a Release DMG in `build/`. Without
+`HANDYBAR_SIGN_IDENTITY` it signs ad-hoc; macOS then does not keep granted
+permissions across updates, so releases are signed with the maintainer's
+self-signed certificate in CI.
+
+`scripts/measure-idle.sh` launches the Release build with the panel closed and
+reports memory footprint, CPU, and idle wakeups. Run it when a change can affect
+idle behavior and compare against the baseline on the same kind of Mac. Idle
+work must not use polling or always-running timers.
+
+| Build | Mac | Footprint | CPU | Idle wakeups |
+| --- | --- | --- | --- | --- |
+| Walking skeleton, Release | Apple silicon, macOS 27.0 | 16 MB | 0.0% | 1 (10 s sample) |
+
+### Releases
+
+Versions follow SemVer, starting at `v0.1.0`. Pushing a `vX.Y.Z` tag runs the
+release workflow, which builds the DMG, signs it with the certificate from the
+`HANDYBAR_SIGNING_CERT_P12_BASE64` and `HANDYBAR_SIGNING_CERT_PASSWORD` repository
+secrets, and creates a draft GitHub Release for the maintainer to publish.
 
 For documentation changes, check relative links, keep proposed behavior distinct
 from implemented behavior, and check the diff for accidental changes.

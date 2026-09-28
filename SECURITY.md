@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-HandyBar is in the planning stage and has no supported releases yet.
+HandyBar is in early development and has no supported releases yet.
 Report concerns in the current source or planned behavior using a private channel.
 
 ## Reporting a vulnerability

@@ -1,0 +1,62 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-26
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Import signing certificate
+        env:
+          CERT_P12_BASE64: ${{ secrets.HANDYBAR_SIGNING_CERT_P12_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.HANDYBAR_SIGNING_CERT_PASSWORD }}
+        run: |
+          if [[ -z "$CERT_P12_BASE64" ]]; then
+            echo "::error::HANDYBAR_SIGNING_CERT_P12_BASE64 is not set; releases must use the stable certificate."
+            exit 1
+          fi
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          keychain_password="$(uuidgen)"
+          echo "$CERT_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 3600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          security import "$RUNNER_TEMP/cert.p12" -k "$keychain" -P "$CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$keychain_password" "$keychain"
+          rm "$RUNNER_TEMP/cert.p12"
+          identity="$(security find-identity -p codesigning "$keychain" | awk '/^ *1\)/ { print $2; exit }')"
+          if [[ -z "$identity" ]]; then
+            echo "::error::No code signing identity found in the imported certificate."
+            exit 1
+          fi
+          echo "HANDYBAR_KEYCHAIN=$keychain" >> "$GITHUB_ENV"
+          echo "HANDYBAR_SIGN_IDENTITY=$identity" >> "$GITHUB_ENV"
+
+      - name: Build DMG
+        env:
+          HANDYBAR_BUILD_NUMBER: ${{ github.run_number }}
+        run: HANDYBAR_VERSION="${GITHUB_REF_NAME#v}" scripts/build-dmg.sh
+
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          gh release create "$GITHUB_REF_NAME" "build/HandyBar-$version.dmg" \
+            --draft --generate-notes --title "HandyBar $version"
+
+      - name: Remove signing keychain
+        if: always()
+        run: |
+          if [[ -n "${HANDYBAR_KEYCHAIN:-}" ]]; then
+            security delete-keychain "$HANDYBAR_KEYCHAIN"
+          fi
