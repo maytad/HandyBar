@@ -13,6 +13,18 @@ HandyBar is an open-source project. It is currently in the
 planning stage: there is no runnable app, installer, or supported release yet.
 Installation and build instructions will be added with the first implementation.
 
+## Planned platform
+
+These decisions are accepted but not yet implemented.
+
+- macOS 14 or later on Apple silicon. Intel Macs are not supported.
+- Native Swift: AppKit for the menu bar item, SwiftUI for panels
+  ([ADR 0001](docs/adr/0001-native-swift-hybrid-appkit-swiftui.md)).
+- Distribution as a DMG on GitHub Releases, signed with a stable self-signed
+  certificate and **not notarized by Apple**. On first launch, macOS blocks the
+  app; allow it in System Settings > Privacy & Security > Open Anyway.
+- Idle resource use is a primary goal: no polling or always-running timers while idle.
+
 ## Initial scope
 
 | Feature | Purpose |
@@ -36,10 +48,10 @@ See [permissions and data](docs/permissions-and-data.md) for the planned behavio
 - Alarm: notification with sound or a repeating alarm that rings until stopped; behavior during sleep.
 - Auto Click: click position, interval, buttons, stop conditions, and start/stop shortcut.
 - Cleanup: supported Mole versions and command interface.
-- Platform: minimum macOS version, implementation stack, and app distribution method.
+- Launch at login: whether it belongs in the initial scope.
 
-Swift and SwiftUI, and launching Mole in Terminal, were suggested during ideation.
-They are proposals, not accepted implementation decisions.
+Launching Mole in Terminal was suggested during ideation.
+It is a proposal, not an accepted implementation decision.
 
 ## Project guidance
 
@@ -47,6 +59,7 @@ They are proposals, not accepted implementation decisions.
 - [Security](SECURITY.md): report security concerns privately.
 - [Agent guidance](AGENTS.md): engineering-skill configuration.
 - [Domain glossary](CONTEXT.md): project vocabulary.
+- [Architecture decisions](docs/adr/): recorded decisions and their reasons.
 - [Brand assets](assets/brand/README.md): editable SVG icons and the approved PNG original.
 
 ## License
