@@ -9,21 +9,31 @@ A macOS menu bar app that brings three everyday utilities into one place.
 
 ## Status
 
-HandyBar is an open-source project. It is currently in the
-planning stage: there is no runnable app, installer, or supported release yet.
-Installation and build instructions will be added with the first implementation.
+HandyBar is an open-source project in early development. The app runs as a
+menu bar item and lists the three features, but none of them work yet, and
+there is no supported release.
 
-## Planned platform
-
-These decisions are accepted but not yet implemented.
+## Platform
 
 - macOS 14 or later on Apple silicon. Intel Macs are not supported.
 - Native Swift: AppKit for the menu bar item, SwiftUI for panels
   ([ADR 0001](docs/adr/0001-native-swift-hybrid-appkit-swiftui.md)).
 - Distribution as a DMG on GitHub Releases, signed with a stable self-signed
-  certificate and **not notarized by Apple**. On first launch, macOS blocks the
-  app; allow it in System Settings > Privacy & Security > Open Anyway.
+  certificate and **not notarized by Apple**.
 - Idle resource use is a primary goal: no polling or always-running timers while idle.
+
+## Install
+
+No release has been published yet. Once one is, download the DMG from
+[GitHub Releases](https://github.com/maytad/HandyBar/releases) and drag HandyBar
+to Applications. Because the app is not notarized, macOS blocks the first launch:
+
+1. Open HandyBar once and dismiss the warning.
+2. Open System Settings > Privacy & Security, find the message about HandyBar,
+   and choose **Open Anyway**.
+
+To build from source, follow the checks in [CONTRIBUTING.md](CONTRIBUTING.md),
+or run `scripts/build-dmg.sh` to produce a DMG in `build/`.
 
 ## Initial scope
 
