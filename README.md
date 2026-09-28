@@ -1,5 +1,10 @@
 # HandyBar
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/brand/handybar-icon-white.svg">
+  <img src="assets/brand/handybar-icon.svg" alt="HandyBar icon: a rounded H with a floating menu bar" width="160" height="160">
+</picture>
+
 A macOS menu bar app that brings three everyday utilities into one place.
 
 ## Status
@@ -42,6 +47,7 @@ They are proposals, not accepted implementation decisions.
 - [Security](SECURITY.md): report security concerns privately.
 - [Agent guidance](AGENTS.md): engineering-skill configuration.
 - [Domain glossary](CONTEXT.md): project vocabulary.
+- [Brand assets](assets/brand/README.md): editable SVG icons and the approved PNG original.
 
 ## License
 
