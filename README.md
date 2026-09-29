@@ -39,12 +39,17 @@ or run `scripts/build-dmg.sh` to produce a DMG in `build/`.
 
 | Feature | Purpose |
 | --- | --- |
-| Alarm | Let the user set a time for an alert. |
+| Alarm | Ring at times of day the user sets, once or on chosen weekdays, while the Mac is awake. |
 | Auto Click | Repeat mouse clicks automatically under the user's control. |
 | Cleanup | Invoke Mole CLI to clean up disk space. |
 
-These are the only three features in the initial scope.
-Additional features require an explicit scope decision.
+These are the only three features in the initial scope. An **Open at login**
+setting, off by default, is also in scope because an Alarm rings only while
+HandyBar is running. Additional features require an explicit scope decision.
+
+Alarms ring inside HandyBar rather than through system notifications
+([ADR 0003](docs/adr/0003-alarms-ring-in-app.md)). An Alarm due while the Mac is
+asleep or HandyBar is not running does not ring late; HandyBar marks it as missed.
 
 ## Mole integration
 
@@ -55,10 +60,8 @@ See [permissions and data](docs/permissions-and-data.md) for the planned behavio
 
 ## Decisions still open
 
-- Alarm: notification with sound or a repeating alarm that rings until stopped; behavior during sleep.
 - Auto Click: click position, interval, buttons, stop conditions, and start/stop shortcut.
 - Cleanup: supported Mole versions and command interface.
-- Launch at login: whether it belongs in the initial scope.
 
 Launching Mole in Terminal was suggested during ideation.
 It is a proposal, not an accepted implementation decision.

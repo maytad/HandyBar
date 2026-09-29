@@ -7,13 +7,28 @@ behavior to implement and verify, not a claim about an existing app.
 
 | Feature | Planned access | Purpose |
 | --- | --- | --- |
-| Alarm | Notification permission | Deliver alerts and sounds if system notifications are selected. |
+| Alarm | None | Rings in a HandyBar window with its own sound; no notification permission. |
+| Open at login | Login item, enabled only by the user | Start HandyBar at login so Alarms can ring. |
 | Auto Click | Accessibility permission | Generate mouse clicks under the user's control. |
 | Cleanup | File access or administrator authorization required by the selected Mole command | Let Mole perform the user-requested cleanup. |
 
 Request permissions when the relevant feature needs them and explain their purpose.
 The exact prompts depend on the chosen implementation, macOS version, and Mole
 version. Verify them on supported macOS versions before documenting them as final.
+
+## Alarm
+
+An Alarm rings only while the Mac is awake and HandyBar is running, including
+during Focus or Do Not Disturb. The ringing window must not take keyboard focus.
+
+While an Alarm rings, if the default output device is muted or below 50% volume,
+HandyBar unmutes it and sets it to 50%. When ringing ends, HandyBar restores the
+previous volume and mute state, unless the user changed the volume while it rang.
+Devices whose volume cannot be set are left unchanged. HandyBar changes no other
+system settings.
+
+Open at login stays off until the user turns it on. HandyBar may suggest it when
+the user creates their first Alarm, but must not enable it without that choice.
 
 ## Auto Click
 
