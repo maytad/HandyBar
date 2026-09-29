@@ -7,21 +7,37 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     private let popover = NSPopover()
     private var toggle = PanelToggle()
+    private let alarms: AlarmController
 
-    override init() {
+    init(alarms: AlarmController) {
+        self.alarms = alarms
         super.init()
         popover.behavior = .transient
         popover.delegate = self
 
         if let button = statusItem.button {
-            let image = NSImage(named: "MenuBarIcon")
-            image?.isTemplate = true
-            image?.size = NSSize(width: 18, height: 18)
-            image?.accessibilityDescription = "HandyBar"
-            button.image = image
             button.target = self
             button.action = #selector(togglePopover(_:))
         }
+        setIcon(showsMissedDot: !alarms.model.missedIDs.isEmpty)
+        alarms.onMissedChange = { [weak self] in self?.setIcon(showsMissedDot: $0) }
+    }
+
+    private func setIcon(showsMissedDot: Bool) {
+        guard let base = NSImage(named: "MenuBarIcon") else { return }
+        let size = NSSize(width: 18, height: 18)
+        let image = NSImage(size: size, flipped: false) { rect in
+            base.draw(in: rect)
+            if showsMissedDot {
+                NSBezierPath(
+                    ovalIn: NSRect(x: rect.maxX - 6, y: rect.maxY - 6, width: 6, height: 6)
+                ).fill()
+            }
+            return true
+        }
+        image.isTemplate = true
+        image.accessibilityDescription = showsMissedDot ? "HandyBar, Missed Alarm" : "HandyBar"
+        statusItem.button?.image = image
     }
 
     @objc private func togglePopover(_ sender: NSStatusBarButton) {
@@ -39,7 +55,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     private func showPopover() {
         guard let button = statusItem.button else { return }
         let hostingController = NSHostingController(
-            rootView: PanelView(onQuit: { NSApp.terminate(nil) })
+            rootView: PanelView(alarms: alarms.model, onQuit: { NSApp.terminate(nil) })
         )
         hostingController.sizingOptions = .preferredContentSize
         popover.contentViewController = hostingController
@@ -62,6 +78,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     func popoverDidClose(_ notification: Notification) {
         // Release the SwiftUI hierarchy so a closed panel holds no view state.
         popover.contentViewController = nil
+        alarms.panelClosed()
         perform(toggle.didClose())
     }
 }

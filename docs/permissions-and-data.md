@@ -58,6 +58,11 @@ The initial design keeps alarm and auto-click settings locally on the Mac.
 Accounts, cloud synchronization, analytics, and telemetry are outside the initial
 scope. Specify the actual storage location and deletion procedure once implemented.
 
+Alarms, including labels and which Alarms were missed, are stored in
+`~/Library/Application Support/HandyBar/alarms.json`. To delete them, quit
+HandyBar and remove that folder. If the file cannot be read, HandyBar renames it
+to `alarms.unreadable-<timestamp>.json` in the same folder instead of overwriting it.
+
 Command output may contain local paths or other personal information. Keep any
 captured output local, avoid logging secrets, and require deliberate user action
 before sharing diagnostics. Explain any future network access before adding it.

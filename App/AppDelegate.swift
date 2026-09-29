@@ -3,6 +3,7 @@ import AppKit
 @main
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    private var alarmController: AlarmController?
     private var statusItemController: StatusItemController?
 
     static func main() {
@@ -13,6 +14,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        statusItemController = StatusItemController()
+        let alarms = AlarmController()
+        alarmController = alarms
+        statusItemController = StatusItemController(alarms: alarms)
     }
 }
