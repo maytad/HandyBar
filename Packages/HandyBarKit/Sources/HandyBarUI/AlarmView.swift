@@ -169,8 +169,7 @@ struct AlarmView: View {
                     }
                 }
             }
-            .frame(maxHeight: 380)
-            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxHeight: .infinity)
         }
     }
 }

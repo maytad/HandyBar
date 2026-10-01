@@ -5,6 +5,7 @@ import SwiftUI
 public struct PanelView: View {
     static let sidebarWidth: CGFloat = 180
     static let detailWidth: CGFloat = 340
+    static let height: CGFloat = 460
 
     private let features: FeaturePreferences
     private let alarms: AlarmPanelModel
@@ -34,8 +35,8 @@ public struct PanelView: View {
                 .frame(width: Self.detailWidth, alignment: .topLeading)
                 .frame(maxHeight: .infinity, alignment: .top)
         }
-        .frame(minHeight: 340)
-        .fixedSize(horizontal: false, vertical: true)
+        // A fixed size: resizing the popover while rows animate makes it flicker.
+        .frame(height: Self.height)
     }
 
     // MARK: Sidebar
