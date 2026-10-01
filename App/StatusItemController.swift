@@ -18,6 +18,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         if let button = statusItem.button {
             button.target = self
             button.action = #selector(togglePopover(_:))
+            button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
         setIcon(showsMissedDot: !alarms.model.missedIDs.isEmpty)
         alarms.onMissedChange = { [weak self] in self?.setIcon(showsMissedDot: $0) }
@@ -41,7 +42,31 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     }
 
     @objc private func togglePopover(_ sender: NSStatusBarButton) {
-        perform(toggle.click())
+        let event = NSApp.currentEvent
+        if event?.type == .rightMouseUp || event?.modifierFlags.contains(.control) == true {
+            showMenu()
+        } else {
+            perform(toggle.click())
+        }
+    }
+
+    private func showMenu() {
+        if popover.isShown { popover.performClose(nil) }
+        let menu = NSMenu()
+        menu.addItem(withTitle: "About HandyBar", action: #selector(showAbout), keyEquivalent: "")
+            .target = self
+        menu.addItem(.separator())
+        menu.addItem(
+            withTitle: "Quit HandyBar", action: #selector(NSApplication.terminate(_:)),
+            keyEquivalent: "q")
+        statusItem.menu = menu
+        statusItem.button?.performClick(nil)
+        statusItem.menu = nil
+    }
+
+    @objc private func showAbout() {
+        NSApp.activate()
+        NSApp.orderFrontStandardAboutPanel(nil)
     }
 
     private func perform(_ command: PanelToggle.Command) {
@@ -62,6 +87,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         popover.animates = true
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         NSApp.activate()
+        popover.contentViewController?.view.window?.makeKey()
     }
 
     func popoverShouldClose(_ popover: NSPopover) -> Bool {

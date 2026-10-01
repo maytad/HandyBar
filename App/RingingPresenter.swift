@@ -50,7 +50,8 @@ final class RingingPresenter {
     }
 }
 
-/// A panel that floats on every Space and beside full-screen apps without taking keyboard focus.
+/// A panel that floats on every Space and beside full-screen apps. It appears without
+/// taking keyboard focus, and takes it only when clicked so Return and Escape work.
 private final class RingingPanel: NSPanel {
     init(content: RingingView) {
         super.init(
@@ -72,7 +73,7 @@ private final class RingingPanel: NSPanel {
         setContent(content)
     }
 
-    override var canBecomeKey: Bool { false }
+    override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
 
     func setContent(_ content: RingingView) {

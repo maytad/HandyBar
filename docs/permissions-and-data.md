@@ -19,7 +19,9 @@ version. Verify them on supported macOS versions before documenting them as fina
 ## Alarm
 
 An Alarm rings only while the Mac is awake and HandyBar is running, including
-during Focus or Do Not Disturb. The ringing window must not take keyboard focus.
+during Focus or Do Not Disturb. The ringing window must not take keyboard focus
+when it appears; it takes focus only when the user clicks it, so that Return and
+Escape can stop or snooze the Alarm.
 
 While an Alarm rings, if the default output device is muted or below 50% volume,
 HandyBar unmutes it and sets it to 50%. When ringing ends, HandyBar restores the
@@ -62,6 +64,9 @@ Alarms, including labels and which Alarms were missed, are stored in
 `~/Library/Application Support/HandyBar/alarms.json`. To delete them, quit
 HandyBar and remove that folder. If the file cannot be read, HandyBar renames it
 to `alarms.unreadable-<timestamp>.json` in the same folder instead of overwriting it.
+
+The panel remembers which feature card was last expanded in HandyBar's user
+defaults (`defaults delete io.github.maytad.HandyBar` removes it).
 
 Command output may contain local paths or other personal information. Keep any
 captured output local, avoid logging secrets, and require deliberate user action

@@ -1,17 +1,14 @@
 import HandyBarAlarm
 import SwiftUI
 
+/// The menu bar panel: one card per feature, with at most one card expanded.
 public struct PanelView: View {
-    private enum Page: Equatable {
-        case features
-        case alarms
-        case editAlarm(Alarm?)
-    }
+    public static let width: CGFloat = 320
 
     private let entries: [FeatureEntry]
     private let alarms: AlarmPanelModel
     private let onQuit: () -> Void
-    @State private var page = Page.features
+    @AppStorage("expandedFeature") private var expanded = "Alarm"
 
     public init(
         entries: [FeatureEntry] = FeatureEntry.all,
@@ -24,63 +21,85 @@ public struct PanelView: View {
     }
 
     public var body: some View {
-        Group {
-            switch page {
-            case .features:
-                features
-            case .alarms:
-                AlarmListView(
-                    model: alarms,
-                    onBack: { page = .features },
-                    onAdd: { page = .editAlarm(nil) },
-                    onEdit: { page = .editAlarm($0) }
-                )
-            case .editAlarm(let alarm):
-                AlarmEditView(
-                    alarm: alarm,
-                    onSave: { edited in
-                        if alarm == nil { alarms.onAdd(edited) } else { alarms.onUpdate(edited) }
-                        page = .alarms
-                    },
-                    onDelete: alarm.map { existing in
-                        {
-                            alarms.onDelete(existing.id)
-                            page = .alarms
-                        }
-                    },
-                    onCancel: { page = .alarms }
-                )
+        VStack(spacing: 10) {
+            header
+            ForEach(entries) { entry in
+                card(entry)
             }
         }
         .padding(12)
-        .frame(width: 260)
+        .frame(width: Self.width)
     }
 
-    private var features: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            ForEach(entries) { entry in
-                Button {
-                    if entry.title == "Alarm" { page = .alarms }
-                } label: {
-                    HStack {
-                        Text(entry.title)
-                        Spacer()
-                        if entry.title == "Alarm", alarms.hasMissedAlarms {
-                            Circle().fill(.red).frame(width: 7, height: 7)
-                                .accessibilityLabel("Missed Alarm")
-                        }
-                    }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.borderless)
-                .disabled(!entry.isAvailable)
-                .padding(.vertical, 4)
+    private var header: some View {
+        HStack {
+            Text("HandyBar").font(.title3.weight(.semibold))
+            Spacer()
+            Menu {
+                Button("Quit HandyBar", action: onQuit)
+                    .keyboardShortcut("q")
+            } label: {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 14))
             }
-            Divider()
-            Button("Quit HandyBar", action: onQuit)
-                .buttonStyle(.borderless)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, 4)
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .accessibilityLabel("HandyBar menu")
+        }
+        .padding(.horizontal, 4)
+    }
+
+    private func toggle(_ entry: FeatureEntry) -> () -> Void {
+        {
+            withAnimation(.snappy) { expanded = expanded == entry.id ? "" : entry.id }
+        }
+    }
+
+    @ViewBuilder
+    private func card(_ entry: FeatureEntry) -> some View {
+        if entry.title == "Alarm" {
+            let isExpanded = expanded == entry.id
+            let status = AlarmStatus(alarms)
+            FeatureCard(
+                entry: entry, tint: .orange, status: status.text, statusIsAlert: status.isAlert,
+                isExpanded: isExpanded, onToggle: toggle(entry)
+            ) {
+                AlarmCard(model: alarms, isExpanded: isExpanded)
+            }
+        } else {
+            FeatureCard(
+                entry: entry, tint: entry.title == "Auto Click" ? .blue : .green,
+                status: "Coming soon", isExpanded: nil
+            ) {
+                EmptyView()
+            }
+        }
+    }
+}
+
+/// The one-line summary on the Alarm card.
+struct AlarmStatus {
+    let text: String
+    let isAlert: Bool
+
+    @MainActor
+    init(_ model: AlarmPanelModel, now: Date = Date(), calendar: Calendar = .current) {
+        let time = { (alarm: Alarm) in AlarmText.time(hour: alarm.hour, minute: alarm.minute) }
+        if let ringing = model.ringingAlarms.first {
+            (text, isAlert) = ("Ringing · \(time(ringing))", true)
+        } else if let missed = model.alarms.first(where: { model.missedIDs.contains($0.id) }) {
+            (text, isAlert) = ("Missed \(time(missed))", true)
+        } else if let (alarm, date) = model.alarms
+            .compactMap({ alarm in alarm.nextOccurrence.map { (alarm, $0) } })
+            .min(by: { $0.1 < $1.1 })
+        {
+            let day = AlarmText.day(date, now: now, calendar: calendar)
+            (text, isAlert) = ("Next \(time(alarm)) \(day)", false)
+        } else if model.alarms.isEmpty {
+            (text, isAlert) = ("No Alarms", false)
+        } else {
+            (text, isAlert) = ("All Alarms off", false)
         }
     }
 }

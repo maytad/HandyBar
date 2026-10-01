@@ -14,31 +14,39 @@ public struct RingingView: View {
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Label("Alarm", systemImage: "alarm.fill")
+        VStack(alignment: .leading, spacing: 14) {
+            Label("Alarm", systemImage: "alarm.waves.left.and.right.fill")
                 .font(.headline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.orange)
+                .symbolEffect(.pulse)
 
             ForEach(alarms) { alarm in
-                VStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(AlarmText.time(hour: alarm.hour, minute: alarm.minute))
-                        .font(.system(size: 28, weight: .semibold).monospacedDigit())
+                        .font(.system(size: 44, weight: .semibold).monospacedDigit())
                     if !alarm.label.isEmpty {
-                        Text(alarm.label).font(.body).lineLimit(2)
+                        Text(alarm.label).font(.title3).lineLimit(2)
                     }
                 }
+                .accessibilityElement(children: .combine)
             }
 
-            HStack {
-                Button("Snooze 5 min", action: onSnooze)
-                Spacer()
-                Button("Stop", action: onStop)
-                    .buttonStyle(.borderedProminent)
+            HStack(spacing: 10) {
+                Button(action: onSnooze) {
+                    Text("Snooze \(Int(AlarmEngine.snoozeInterval / 60)) min")
+                        .frame(maxWidth: .infinity)
+                }
+                .keyboardShortcut(.cancelAction)
+                Button(action: onStop) {
+                    Text("Stop").frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .keyboardShortcut(.defaultAction)
             }
-            .controlSize(.large)
+            .controlSize(.extraLarge)
         }
-        .padding(16)
-        .frame(width: 280)
+        .padding(20)
+        .frame(width: 320)
     }
 }
 

@@ -40,6 +40,8 @@ final class AlarmController {
         model.onUpdate = { [weak self] in self?.handle(.update($0)) }
         model.onDelete = { [weak self] in self?.handle(.delete($0)) }
         model.onSetEnabled = { [weak self] in self?.handle(.setEnabled($0, $1)) }
+        model.onStop = { [weak self] in self?.handle(.stop) }
+        model.onSnooze = { [weak self] in self?.handle(.snooze) }
         ringing.onStop = { [weak self] in self?.handle(.stop) }
         ringing.onSnooze = { [weak self] in self?.handle(.snooze) }
 
@@ -67,6 +69,7 @@ final class AlarmController {
         if engine.snapshot != before { save() }
         model.alarms = engine.alarms
         model.missedIDs = Set(engine.missedAlarms.map(\.id))
+        model.ringingIDs = engine.ringingAlarms.map(\.id)
         ringing.show(engine.ringingAlarms)
         armTimer()
         if hadMissed != !engine.missedAlarms.isEmpty {
