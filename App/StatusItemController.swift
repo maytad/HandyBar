@@ -8,9 +8,20 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     private let popover = NSPopover()
     private var toggle = PanelToggle()
     private let alarms: AlarmController
+    private let features: FeaturePreferences
+    private let openAtLogin: OpenAtLoginModel
+    private let settings: SettingsWindowController
 
-    init(alarms: AlarmController) {
+    init(
+        alarms: AlarmController,
+        features: FeaturePreferences,
+        openAtLogin: OpenAtLoginModel,
+        settings: SettingsWindowController
+    ) {
         self.alarms = alarms
+        self.features = features
+        self.openAtLogin = openAtLogin
+        self.settings = settings
         super.init()
         popover.behavior = .transient
         popover.delegate = self
@@ -55,6 +66,8 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         let menu = NSMenu()
         menu.addItem(withTitle: "About HandyBar", action: #selector(showAbout), keyEquivalent: "")
             .target = self
+        menu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
+            .target = self
         menu.addItem(.separator())
         menu.addItem(
             withTitle: "Quit HandyBar", action: #selector(NSApplication.terminate(_:)),
@@ -62,6 +75,11 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         statusItem.menu = menu
         statusItem.button?.performClick(nil)
         statusItem.menu = nil
+    }
+
+    @objc private func openSettings() {
+        if popover.isShown { popover.performClose(nil) }
+        settings.show()
     }
 
     @objc private func showAbout() {
@@ -80,7 +98,10 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     private func showPopover() {
         guard let button = statusItem.button else { return }
         let hostingController = NSHostingController(
-            rootView: PanelView(alarms: alarms.model, onQuit: { NSApp.terminate(nil) })
+            rootView: PanelView(
+                features: features, alarms: alarms.model, openAtLogin: openAtLogin,
+                onOpenSettings: { [weak self] in self?.openSettings() },
+                onQuit: { NSApp.terminate(nil) })
         )
         hostingController.sizingOptions = .preferredContentSize
         popover.contentViewController = hostingController

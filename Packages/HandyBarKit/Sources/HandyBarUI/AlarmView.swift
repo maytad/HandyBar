@@ -1,10 +1,10 @@
 import HandyBarAlarm
 import SwiftUI
 
-/// The Alarm card's content: Ringing controls, quick add, and, when expanded, every Alarm.
-struct AlarmCard: View {
+/// The Alarm feature: Ringing controls, quick add, and every Alarm.
+struct AlarmView: View {
     let model: AlarmPanelModel
-    let isExpanded: Bool
+    let openAtLogin: OpenAtLoginModel
 
     @State private var entryText = ""
     @State private var editingID: Alarm.ID?
@@ -15,10 +15,30 @@ struct AlarmCard: View {
         VStack(alignment: .leading, spacing: 10) {
             if !model.ringingAlarms.isEmpty { ringing }
             quickAdd
+            if openAtLogin.isSuggesting { loginSuggestion }
             if let deleted { undoBar(deleted) }
-            if isExpanded { list }
+            list
         }
         .onAppear { isEntryFocused = true }
+    }
+
+    private var loginSuggestion: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label(
+                "Alarms ring only while HandyBar is running. Open it when you log in?",
+                systemImage: "info.circle"
+            )
+            .font(.callout)
+            .fixedSize(horizontal: false, vertical: true)
+            HStack {
+                Spacer()
+                Button("Not Now", action: openAtLogin.declineSuggestion)
+                Button("Open at Login", action: openAtLogin.acceptSuggestion)
+                    .buttonStyle(.borderedProminent)
+            }
+        }
+        .padding(10)
+        .background(.blue.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
     }
 
     private var ringing: some View {

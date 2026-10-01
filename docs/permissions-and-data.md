@@ -29,8 +29,10 @@ previous volume and mute state, unless the user changed the volume while it rang
 Devices whose volume cannot be set are left unchanged. HandyBar changes no other
 system settings.
 
-Open at login stays off until the user turns it on. HandyBar may suggest it when
-the user creates their first Alarm, but must not enable it without that choice.
+Open at login stays off until the user turns it on in Settings > General. HandyBar
+suggests it once, when the user creates their first Alarm, but must not enable it
+without that choice. It uses the system login item for HandyBar itself, with no
+helper app or launch agent; macOS shows a notice when it is added.
 
 ## Auto Click
 
@@ -65,8 +67,11 @@ Alarms, including labels and which Alarms were missed, are stored in
 HandyBar and remove that folder. If the file cannot be read, HandyBar renames it
 to `alarms.unreadable-<timestamp>.json` in the same folder instead of overwriting it.
 
-The panel remembers which feature card was last expanded in HandyBar's user
-defaults (`defaults delete io.github.maytad.HandyBar` removes it).
+HandyBar's user defaults hold the last opened feature, the order and visibility of
+features in the panel, the last Settings pane, and whether the Open at login
+suggestion was shown. `defaults delete io.github.maytad.HandyBar` removes them.
+The login item itself is managed by macOS; turn it off in HandyBar's Settings or in
+System Settings > General > Login Items.
 
 Command output may contain local paths or other personal information. Keep any
 captured output local, avoid logging secrets, and require deliberate user action
