@@ -7,6 +7,7 @@ struct AlarmView: View {
     let openAtLogin: OpenAtLoginModel
 
     @State private var entryText = ""
+    @State private var highlighted = 0
     @State private var editingID: Alarm.ID?
     @State private var deleted: Alarm?
     @FocusState private var isEntryFocused: Bool
@@ -20,6 +21,7 @@ struct AlarmView: View {
             list
         }
         .onAppear { isEntryFocused = true }
+        .onDisappear { model.savePendingEdit() }
     }
 
     private var loginSuggestion: some View {
@@ -63,57 +65,99 @@ struct AlarmView: View {
 
     // MARK: Quick add
 
-    private var parsedEntry: TimeEntry? {
-        TimeEntry.parse(
-            entryText, uses12HourClock: AlarmText.uses12HourClock(), now: Date(),
+    private var suggestions: [TimeEntry] {
+        TimeEntry.suggestions(
+            for: entryText, uses12HourClock: AlarmText.uses12HourClock(), now: Date(),
             calendar: .current)
     }
 
     private var quickAdd: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
-                TextField("Add alarm, e.g. 7:30 Standup", text: $entryText)
+                TextField("Add alarm: type a time, e.g. 7:30", text: $entryText)
                     .textFieldStyle(.roundedBorder)
                     .focused($isEntryFocused)
-                    .onSubmit(add)
-                Button(action: add) {
+                    .onSubmit { add(at: highlighted) }
+                    .onKeyPress(.downArrow) { moveHighlight(by: 1) }
+                    .onKeyPress(.upArrow) { moveHighlight(by: -1) }
+                    .onChange(of: entryText) { highlighted = 0 }
+                Button {
+                    add(at: highlighted)
+                } label: {
                     Image(systemName: "plus")
                         .frame(width: 14, height: 14)
                 }
-                .disabled(parsedEntry == nil)
+                .disabled(suggestions.isEmpty)
                 .accessibilityLabel("Add Alarm")
             }
             .controlSize(.large)
 
             if !entryText.trimmingCharacters(in: .whitespaces).isEmpty {
-                Group {
-                    if let entry = parsedEntry {
-                        Text(preview(entry))
-                            .foregroundStyle(.secondary)
-                    } else {
-                        Text("Type a time like 7:30, 19:30, or 7pm")
-                            .foregroundStyle(.red)
-                    }
+                if suggestions.isEmpty {
+                    Text("Type a time like 7, 7:30, 1930, or 7pm, then a label if you like")
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .padding(.leading, 4)
+                } else {
+                    suggestionList
                 }
-                .font(.caption)
-                .padding(.leading, 4)
             }
         }
     }
 
-    private func preview(_ entry: TimeEntry) -> String {
+    private var suggestionList: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(suggestions.enumerated()), id: \.offset) { index, entry in
+                Button {
+                    add(at: index)
+                } label: {
+                    HStack {
+                        Text(AlarmText.time(hour: entry.hour, minute: entry.minute))
+                            .font(.body.monospacedDigit().weight(.medium))
+                        Text(details(entry)).foregroundStyle(.secondary)
+                        Spacer()
+                        if index == highlighted {
+                            Image(systemName: "return").foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(
+                        index == highlighted
+                            ? AnyShapeStyle(Color.accentColor.opacity(0.18))
+                            : AnyShapeStyle(.clear),
+                        in: RoundedRectangle(cornerRadius: 6)
+                    )
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .onHover { if $0 { highlighted = index } }
+            }
+        }
+        .padding(4)
+        .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 8))
+    }
+
+    private func details(_ entry: TimeEntry) -> String {
         let now = Date()
         let date =
             Calendar.current.nextDate(
                 after: now, matching: DateComponents(hour: entry.hour, minute: entry.minute),
                 matchingPolicy: .nextTime) ?? now
-        let time = AlarmText.time(hour: entry.hour, minute: entry.minute)
-        let ring = "Rings \(AlarmText.day(date, now: now)) at \(time)"
-        return entry.label.isEmpty ? ring : "\(ring) · \(entry.label)"
+        let day = "Rings \(AlarmText.day(date, now: now))"
+        return entry.label.isEmpty ? day : "\(day) · \(entry.label)"
     }
 
-    private func add() {
-        guard let entry = parsedEntry else { return }
+    private func moveHighlight(by offset: Int) -> KeyPress.Result {
+        guard !suggestions.isEmpty else { return .ignored }
+        highlighted = min(max(highlighted + offset, 0), suggestions.count - 1)
+        return .handled
+    }
+
+    private func add(at index: Int) {
+        let suggestions = suggestions
+        guard suggestions.indices.contains(index) else { return }
+        let entry = suggestions[index]
         model.onAdd(Alarm(hour: entry.hour, minute: entry.minute, label: entry.label))
         entryText = ""
         deleted = nil
@@ -145,42 +189,55 @@ struct AlarmView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
         } else {
-            ScrollView {
-                VStack(spacing: 0) {
-                    ForEach(model.alarms) { alarm in
-                        if alarm.id != model.alarms.first?.id { Divider() }
-                        AlarmRow(
-                            alarm: alarm,
-                            isMissed: model.missedIDs.contains(alarm.id),
-                            isEditing: editingID == alarm.id,
-                            onTap: {
-                                withAnimation(.snappy) {
-                                    editingID = editingID == alarm.id ? nil : alarm.id
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(spacing: 0) {
+                        ForEach(model.alarms) { alarm in
+                            if alarm.id != model.alarms.first?.id { Divider() }
+                            AlarmRow(
+                                alarm: alarm,
+                                model: model,
+                                isEditing: editingID == alarm.id,
+                                onTap: { toggleEditing(alarm.id) },
+                                onDelete: {
+                                    editingID = nil
+                                    deleted = alarm
+                                    model.onDelete(alarm.id)
                                 }
-                            },
-                            onSetEnabled: { model.onSetEnabled(alarm.id, $0) },
-                            onChange: model.onUpdate,
-                            onDelete: {
-                                editingID = nil
-                                deleted = alarm
-                                model.onDelete(alarm.id)
-                            }
-                        )
+                            )
+                            .id(alarm.id)
+                        }
+                    }
+                }
+                .frame(maxHeight: .infinity)
+                .onChange(of: model.alarms.map(\.id)) {
+                    if let editingID { proxy.scrollTo(editingID, anchor: .top) }
+                }
+                .onChange(of: editingID) {
+                    guard let editingID else { return }
+                    // Scrolling before the row finishes expanding targets the collapsed layout.
+                    Task {
+                        try? await Task.sleep(for: .seconds(0.35))
+                        withAnimation(.snappy) { proxy.scrollTo(editingID, anchor: .top) }
                     }
                 }
             }
-            .frame(maxHeight: .infinity)
+        }
+    }
+
+    private func toggleEditing(_ id: Alarm.ID) {
+        model.savePendingEdit()
+        withAnimation(.snappy) {
+            editingID = editingID == id ? nil : id
         }
     }
 }
 
 private struct AlarmRow: View {
     let alarm: Alarm
-    let isMissed: Bool
+    let model: AlarmPanelModel
     let isEditing: Bool
     let onTap: () -> Void
-    let onSetEnabled: (Bool) -> Void
-    let onChange: (Alarm) -> Void
     let onDelete: () -> Void
 
     var body: some View {
@@ -195,7 +252,7 @@ private struct AlarmRow: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
-                        if isMissed {
+                        if model.missedIDs.contains(alarm.id) {
                             Label("Missed", systemImage: "exclamationmark.circle.fill")
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(.red)
@@ -207,14 +264,18 @@ private struct AlarmRow: View {
                 .buttonStyle(.plain)
                 .accessibilityHint(isEditing ? "Hides options" : "Shows options")
 
-                Toggle("On", isOn: Binding(get: { alarm.isEnabled }, set: { onSetEnabled($0) }))
-                    .toggleStyle(.switch)
-                    .labelsHidden()
-                    .accessibilityLabel(
-                        "\(AlarmText.time(hour: alarm.hour, minute: alarm.minute)) Alarm")
+                Toggle(
+                    "On",
+                    isOn: Binding(
+                        get: { alarm.isEnabled }, set: { model.onSetEnabled(alarm.id, $0) })
+                )
+                .toggleStyle(.switch)
+                .labelsHidden()
+                .accessibilityLabel(
+                    "\(AlarmText.time(hour: alarm.hour, minute: alarm.minute)) Alarm")
             }
             if isEditing {
-                AlarmEditor(alarm: alarm, onChange: onChange, onDelete: onDelete)
+                AlarmEditor(alarm: alarm, model: model, onDelete: onDelete)
             }
         }
         .padding(.vertical, 8)
@@ -227,32 +288,33 @@ private struct AlarmRow: View {
     }
 }
 
-/// Inline options for one Alarm; every change is saved as it is made.
+/// Inline options for one Alarm. Label and Repeat days save as they change; the time
+/// saves a moment after the user stops adjusting it, so the list doesn't re-sort mid-edit.
 private struct AlarmEditor: View {
     let alarm: Alarm
-    let onChange: (Alarm) -> Void
+    let model: AlarmPanelModel
     let onDelete: () -> Void
 
+    @State private var time: ClockTime
     @State private var showsCustomDays: Bool
+    @State private var saveTask: Task<Void, Never>?
 
-    init(alarm: Alarm, onChange: @escaping (Alarm) -> Void, onDelete: @escaping () -> Void) {
+    init(alarm: Alarm, model: AlarmPanelModel, onDelete: @escaping () -> Void) {
         self.alarm = alarm
-        self.onChange = onChange
+        self.model = model
         self.onDelete = onDelete
+        _time = State(initialValue: ClockTime(hour: alarm.hour, minute: alarm.minute))
         _showsCustomDays = State(initialValue: RepeatPreset(alarm.repeatDays) == .custom)
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
+            ClockDigitsEditor(time: $time, focusOnAppear: true, onSubmit: saveTime)
+                .onChange(of: time) { scheduleTimeSave() }
+
             Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 8) {
                 GridRow {
-                    Text("Time").gridColumnAlignment(.trailing)
-                    DatePicker("Time", selection: time, displayedComponents: .hourAndMinute)
-                        .datePickerStyle(.field)
-                        .labelsHidden()
-                }
-                GridRow {
-                    Text("Label")
+                    Text("Label").gridColumnAlignment(.trailing)
                     TextField("Alarm", text: label)
                         .textFieldStyle(.roundedBorder)
                 }
@@ -276,6 +338,34 @@ private struct AlarmEditor: View {
         }
         .padding(10)
         .background(.background.opacity(0.6), in: RoundedRectangle(cornerRadius: 8))
+        .onDisappear(perform: saveTime)
+    }
+
+    private func scheduleTimeSave() {
+        saveTask?.cancel()
+        guard time != ClockTime(hour: alarm.hour, minute: alarm.minute) else {
+            model.pendingEdit = nil
+            return
+        }
+        let id = alarm.id
+        let time = time
+        model.pendingEdit = { [model] in
+            model.edit(id) {
+                $0.hour = time.hour
+                $0.minute = time.minute
+                $0.isEnabled = true
+            }
+        }
+        saveTask = Task {
+            try? await Task.sleep(for: .seconds(1.2))
+            if !Task.isCancelled { model.savePendingEdit() }
+        }
+    }
+
+    private func saveTime() {
+        scheduleTimeSave()
+        saveTask?.cancel()
+        model.savePendingEdit()
     }
 
     private var days: some View {
@@ -283,9 +373,9 @@ private struct AlarmEditor: View {
             ForEach(AlarmText.orderedWeekdays(), id: \.self) { day in
                 let isOn = alarm.repeatDays.contains(day)
                 Button {
-                    var days = alarm.repeatDays
-                    if isOn { days.remove(day) } else { days.insert(day) }
-                    change { $0.repeatDays = days }
+                    change {
+                        if isOn { $0.repeatDays.remove(day) } else { $0.repeatDays.insert(day) }
+                    }
                 } label: {
                     Text(AlarmText.shortName(day))
                         .font(.caption.weight(.medium))
@@ -304,31 +394,10 @@ private struct AlarmEditor: View {
         }
     }
 
-    private var time: Binding<Date> {
-        Binding(
-            get: {
-                Calendar.current.date(
-                    bySettingHour: alarm.hour, minute: alarm.minute, second: 0, of: Date())
-                    ?? Date()
-            },
-            set: { date in
-                let parts = Calendar.current.dateComponents([.hour, .minute], from: date)
-                change {
-                    $0.hour = parts.hour ?? 0
-                    $0.minute = parts.minute ?? 0
-                }
-            }
-        )
-    }
-
     private var label: Binding<String> {
         Binding(
             get: { alarm.label },
-            set: { text in
-                var edited = alarm
-                edited.label = text
-                onChange(edited)
-            }
+            set: { text in model.edit(alarm.id) { $0.label = text } }
         )
     }
 
@@ -344,9 +413,10 @@ private struct AlarmEditor: View {
 
     /// Applies a schedule edit; changing when an Alarm rings switches it on.
     private func change(_ edit: (inout Alarm) -> Void) {
-        var edited = alarm
-        edit(&edited)
-        edited.isEnabled = true
-        onChange(edited)
+        model.savePendingEdit()
+        model.edit(alarm.id) {
+            edit(&$0)
+            $0.isEnabled = true
+        }
     }
 }

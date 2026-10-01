@@ -57,6 +57,7 @@ final class AlarmController {
 
     /// The user has seen the panel, so Missed Alarm marks can be cleared.
     func panelClosed() {
+        model.savePendingEdit()
         guard !engine.missedAlarms.isEmpty else { return }
         handle(.missedAlarmsSeen)
     }
