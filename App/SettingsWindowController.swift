@@ -7,17 +7,23 @@ import SwiftUI
 final class SettingsWindowController: NSObject, NSWindowDelegate {
     private let features: FeaturePreferences
     private let openAtLogin: OpenAtLoginModel
+    private let soundPreview: AlarmSoundPreview
     private var window: NSWindow?
 
-    init(features: FeaturePreferences, openAtLogin: OpenAtLoginModel) {
+    init(
+        features: FeaturePreferences, openAtLogin: OpenAtLoginModel,
+        soundPreview: AlarmSoundPreview
+    ) {
         self.features = features
         self.openAtLogin = openAtLogin
+        self.soundPreview = soundPreview
     }
 
     func show() {
         if window == nil {
             let hosting = NSHostingController(
-                rootView: SettingsView(features: features, openAtLogin: openAtLogin))
+                rootView: SettingsView(
+                    features: features, openAtLogin: openAtLogin, soundPreview: soundPreview))
             let window = NSWindow(contentViewController: hosting)
             window.title = "HandyBar Settings"
             window.styleMask = [.titled, .closable, .resizable, .fullSizeContentView]

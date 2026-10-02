@@ -58,6 +58,7 @@ final class AlarmController {
     /// The user has seen the panel, so Missed Alarm marks can be cleared.
     func panelClosed() {
         model.savePendingEdit()
+        model.soundPreview.stop()
         guard !engine.missedAlarms.isEmpty else { return }
         handle(.missedAlarmsSeen)
     }
@@ -71,6 +72,7 @@ final class AlarmController {
         model.alarms = engine.alarms
         model.missedIDs = Set(engine.missedAlarms.map(\.id))
         model.ringingIDs = engine.ringingAlarms.map(\.id)
+        if !engine.ringingAlarms.isEmpty { model.soundPreview.stop() }
         ringing.show(engine.ringingAlarms)
         armTimer()
         if hadMissed != !engine.missedAlarms.isEmpty {

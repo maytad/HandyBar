@@ -20,7 +20,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let openAtLogin = OpenAtLoginModel(service: SystemLoginItem())
         let alarms = AlarmController()
         alarms.onFirstAlarmCreated = { openAtLogin.firstAlarmCreated() }
-        let settings = SettingsWindowController(features: features, openAtLogin: openAtLogin)
+        let settings = SettingsWindowController(
+            features: features, openAtLogin: openAtLogin, soundPreview: alarms.model.soundPreview)
 
         alarmController = alarms
         settingsController = settings

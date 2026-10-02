@@ -1,10 +1,12 @@
 import AppKit
+import HandyBarAlarm
 import SwiftUI
 
-/// The Settings window: General options, and which features the panel shows.
+/// The Settings window: General options, Alarm defaults, and which features the panel shows.
 public struct SettingsView: View {
     enum Pane: String, CaseIterable, Identifiable {
         case general = "General"
+        case alarm = "Alarm"
         case features = "Features"
 
         var id: String { rawValue }
@@ -12,6 +14,7 @@ public struct SettingsView: View {
         var symbol: String {
             switch self {
             case .general: "gearshape"
+            case .alarm: "alarm"
             case .features: "square.grid.2x2"
             }
         }
@@ -19,11 +22,16 @@ public struct SettingsView: View {
 
     private let features: FeaturePreferences
     private let openAtLogin: OpenAtLoginModel
+    private let soundPreview: AlarmSoundPreview
     @AppStorage("settingsPane") private var pane = Pane.general
 
-    public init(features: FeaturePreferences, openAtLogin: OpenAtLoginModel) {
+    public init(
+        features: FeaturePreferences, openAtLogin: OpenAtLoginModel,
+        soundPreview: AlarmSoundPreview
+    ) {
         self.features = features
         self.openAtLogin = openAtLogin
+        self.soundPreview = soundPreview
     }
 
     public var body: some View {
@@ -35,6 +43,7 @@ public struct SettingsView: View {
         } detail: {
             switch pane {
             case .general: GeneralPane(openAtLogin: openAtLogin)
+            case .alarm: AlarmPane(preview: soundPreview)
             case .features: FeaturesPane(features: features)
             }
         }
@@ -82,6 +91,28 @@ private struct GeneralPane: View {
         .onReceive(
             NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)
         ) { _ in openAtLogin.refresh() }
+    }
+}
+
+private struct AlarmPane: View {
+    let preview: AlarmSoundPreview
+    @AppStorage(defaultAlarmSoundKey) private var defaultSound = AlarmSound.beeps
+
+    var body: some View {
+        Form {
+            Section {
+                LabeledContent("Sound for new Alarms") {
+                    SoundPicker(sound: $defaultSound, preview: preview)
+                }
+            } footer: {
+                Text("Each Alarm can have its own sound. Click an Alarm in the panel to change it.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+        .navigationTitle("Alarm")
+        .onDisappear(perform: preview.stop)
     }
 }
 

@@ -11,6 +11,7 @@ struct AlarmView: View {
     @State private var editingID: Alarm.ID?
     @State private var deleted: Alarm?
     @FocusState private var isEntryFocused: Bool
+    @AppStorage(defaultAlarmSoundKey) private var defaultSound = AlarmSound.beeps
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -158,7 +159,8 @@ struct AlarmView: View {
         let suggestions = suggestions
         guard suggestions.indices.contains(index) else { return }
         let entry = suggestions[index]
-        model.onAdd(Alarm(hour: entry.hour, minute: entry.minute, label: entry.label))
+        model.onAdd(
+            Alarm(hour: entry.hour, minute: entry.minute, label: entry.label, sound: defaultSound))
         entryText = ""
         deleted = nil
         isEntryFocused = true
@@ -288,7 +290,7 @@ private struct AlarmRow: View {
     }
 }
 
-/// Inline options for one Alarm. Label and Repeat days save as they change; the time
+/// Inline options for one Alarm. Label, Repeat days, and sound save as they change; the time
 /// saves a moment after the user stops adjusting it, so the list doesn't re-sort mid-edit.
 private struct AlarmEditor: View {
     let alarm: Alarm
@@ -326,6 +328,11 @@ private struct AlarmEditor: View {
                     .labelsHidden()
                     .fixedSize()
                 }
+                GridRow {
+                    Text("Sound")
+                    SoundPicker(sound: sound, preview: model.soundPreview)
+                        .foregroundStyle(.primary)
+                }
             }
             .foregroundStyle(.secondary)
 
@@ -338,7 +345,10 @@ private struct AlarmEditor: View {
         }
         .padding(10)
         .background(.background.opacity(0.6), in: RoundedRectangle(cornerRadius: 8))
-        .onDisappear(perform: saveTime)
+        .onDisappear {
+            saveTime()
+            model.soundPreview.stop()
+        }
     }
 
     private func scheduleTimeSave() {
@@ -398,6 +408,13 @@ private struct AlarmEditor: View {
         Binding(
             get: { alarm.label },
             set: { text in model.edit(alarm.id) { $0.label = text } }
+        )
+    }
+
+    private var sound: Binding<AlarmSound> {
+        Binding(
+            get: { alarm.sound },
+            set: { sound in model.edit(alarm.id) { $0.sound = sound } }
         )
     }
 

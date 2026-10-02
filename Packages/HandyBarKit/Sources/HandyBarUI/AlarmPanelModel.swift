@@ -8,6 +8,7 @@ public final class AlarmPanelModel {
     public var alarms: [Alarm] = []
     public var missedIDs: Set<Alarm.ID> = []
     public var ringingIDs: [Alarm.ID] = []
+    public let soundPreview = AlarmSoundPreview()
 
     @ObservationIgnored public var onAdd: (Alarm) -> Void = { _ in }
     @ObservationIgnored public var onUpdate: (Alarm) -> Void = { _ in }

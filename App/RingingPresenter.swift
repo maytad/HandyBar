@@ -3,14 +3,14 @@ import HandyBarAlarm
 import HandyBarUI
 import SwiftUI
 
-/// Shows Ringing Alarms in a window above everything and plays their sound.
+/// Shows Ringing Alarms in a window above everything and plays the first one's sound.
 @MainActor
 final class RingingPresenter {
     var onStop: () -> Void = {}
     var onSnooze: () -> Void = {}
 
     private var panel: RingingPanel?
-    private var sound: AlarmSound?
+    private var sound: AlarmSoundPlayer?
     private var volumeBoost: VolumeBoost?
     private let output = SystemOutputVolume()
     private var shownAlarms: [Alarm] = []
@@ -35,8 +35,9 @@ final class RingingPresenter {
             panel.present()
             self.panel = panel
             volumeBoost = VolumeBoost.begin(on: output)
-            sound = AlarmSound()
-            sound?.play()
+            let sound = AlarmSoundPlayer()
+            sound.play(alarms[0].sound)
+            self.sound = sound
         }
     }
 
