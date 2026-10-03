@@ -62,13 +62,13 @@ The initial design keeps alarm and auto-click settings locally on the Mac.
 Accounts, cloud synchronization, analytics, and telemetry are outside the initial
 scope. Specify the actual storage location and deletion procedure once implemented.
 
-Alarms, including labels, sounds, and which Alarms were missed, are stored in
+Alarms, including labels, sounds, snooze lengths, and which Alarms were missed, are stored in
 `~/Library/Application Support/HandyBar/alarms.json`. To delete them, quit
 HandyBar and remove that folder. If the file cannot be read, HandyBar renames it
 to `alarms.unreadable-<timestamp>.json` in the same folder instead of overwriting it. If it can't be renamed, HandyBar leaves it in place and saves no Alarm changes until it is relaunched.
 
 HandyBar's user defaults hold the last opened feature, the order and visibility of
-features in the panel, the last Settings pane, the sound for new Alarms, and whether the Open at login
+features in the panel, the last Settings pane, the sound and snooze length for new Alarms, and whether the Open at login
 suggestion was shown. `defaults delete io.github.maytad.HandyBar` removes them.
 The login item itself is managed by macOS; turn it off in HandyBar's Settings or in
 System Settings > General > Login Items.

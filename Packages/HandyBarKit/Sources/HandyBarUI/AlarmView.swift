@@ -11,7 +11,8 @@ struct AlarmView: View {
     @State private var editingID: Alarm.ID?
     @State private var deleted: Alarm?
     @FocusState private var isEntryFocused: Bool
-    @AppStorage(defaultAlarmSoundKey) private var defaultSound = AlarmSound.beeps
+    @AppStorage(AlarmDefaults.soundKey) private var defaultSound = AlarmSound.beeps
+    @AppStorage(AlarmDefaults.snoozeKey) private var defaultSnooze = AlarmSnooze.fiveMinutes
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -55,7 +56,9 @@ struct AlarmView: View {
             )
             .font(.headline.monospacedDigit())
             Spacer(minLength: 0)
-            Button("Snooze", action: model.onSnooze)
+            if AlarmSnooze.length(forRinging: model.ringingAlarms) != .off {
+                Button("Snooze", action: model.onSnooze)
+            }
             Button("Stop", action: model.onStop)
                 .buttonStyle(.borderedProminent)
                 .tint(.red)
@@ -160,7 +163,9 @@ struct AlarmView: View {
         guard suggestions.indices.contains(index) else { return }
         let entry = suggestions[index]
         model.onAdd(
-            Alarm(hour: entry.hour, minute: entry.minute, label: entry.label, sound: defaultSound))
+            Alarm(
+                hour: entry.hour, minute: entry.minute, label: entry.label, sound: defaultSound,
+                snooze: defaultSnooze))
         entryText = ""
         deleted = nil
         isEntryFocused = true
@@ -290,7 +295,7 @@ private struct AlarmRow: View {
     }
 }
 
-/// Inline options for one Alarm. Label, Repeat days, and sound save as they change; the time
+/// Inline options for one Alarm. Label, Repeat days, sound, and snooze save as they change; the time
 /// saves a moment after the user stops adjusting it, so the list doesn't re-sort mid-edit.
 private struct AlarmEditor: View {
     let alarm: Alarm
@@ -332,6 +337,10 @@ private struct AlarmEditor: View {
                     Text("Sound")
                     SoundPicker(sound: sound, preview: model.soundPreview)
                         .foregroundStyle(.primary)
+                }
+                GridRow {
+                    Text("Snooze")
+                    SnoozePicker(snooze: snooze)
                 }
             }
             .foregroundStyle(.secondary)
@@ -415,6 +424,13 @@ private struct AlarmEditor: View {
         Binding(
             get: { alarm.sound },
             set: { sound in model.edit(alarm.id) { $0.sound = sound } }
+        )
+    }
+
+    private var snooze: Binding<AlarmSnooze> {
+        Binding(
+            get: { alarm.snooze },
+            set: { snooze in model.edit(alarm.id) { $0.snooze = snooze } }
         )
     }
 

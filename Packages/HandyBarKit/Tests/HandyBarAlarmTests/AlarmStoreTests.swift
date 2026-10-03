@@ -22,20 +22,22 @@ private func temporaryFile() -> URL {
     #expect(try store.load() == snapshot)
 }
 
-@Test func alarmSoundIsSavedAndLoadedBack() throws {
+@Test func alarmSoundAndSnoozeAreSavedAndLoadedBack() throws {
     let store = AlarmStore(fileURL: temporaryFile())
-    let alarm = Alarm(hour: 6, minute: 30, sound: .chime)
+    let alarm = Alarm(hour: 6, minute: 30, sound: .chime, snooze: .off)
     try store.save(AlarmEngine.Snapshot(alarms: [alarm]))
     #expect(try store.load().alarms.map(\.sound) == [.chime])
+    #expect(try store.load().alarms.map(\.snooze) == [.off])
 }
 
 @Test(arguments: [
     #"{"id":"6B1F2C1E-3D2A-4E5F-8A9B-0C1D2E3F4A5B","hour":7,"minute":0,"label":"","repeatDays":[],"isEnabled":true}"#,
-    #"{"id":"6B1F2C1E-3D2A-4E5F-8A9B-0C1D2E3F4A5B","hour":7,"minute":0,"label":"","repeatDays":[],"isEnabled":true,"sound":"future-sound"}"#,
+    #"{"id":"6B1F2C1E-3D2A-4E5F-8A9B-0C1D2E3F4A5B","hour":7,"minute":0,"label":"","repeatDays":[],"isEnabled":true,"sound":"future-sound","snooze":7}"#,
 ])
-func alarmWithoutAKnownSoundUsesBeeps(json: String) throws {
+func alarmWithoutAKnownSoundOrSnoozeUsesTheDefaults(json: String) throws {
     let alarm = try JSONDecoder().decode(Alarm.self, from: Data(json.utf8))
     #expect(alarm.sound == .beeps)
+    #expect(alarm.snooze == .fiveMinutes)
     #expect(alarm.hour == 7)
 }
 

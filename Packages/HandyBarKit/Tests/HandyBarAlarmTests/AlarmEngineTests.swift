@@ -368,3 +368,45 @@ private func engine(with alarms: [Alarm], at now: Date) -> AlarmEngine {
     #expect(!engine.isRinging)
     #expect(engine.nextDeadline == nil)
 }
+
+// MARK: - Snooze length
+
+@Test func alarmSnoozesForItsOwnLength() {
+    let alarm = Alarm(hour: 10, minute: 0, snooze: .tenMinutes)
+    var engine = engine(with: [alarm], at: monday(9))
+    engine.handle(.deadlineReached, at: monday(10))
+    engine.handle(.snooze, at: monday(10, 1))
+    #expect(engine.nextDeadline == monday(10, 11))
+}
+
+@Test func ringingAlarmsSnoozeForTheFirstOnesLength() {
+    let first = Alarm(hour: 10, minute: 0, snooze: .fifteenMinutes)
+    let second = Alarm(hour: 10, minute: 0, snooze: .oneMinute)
+    var engine = engine(with: [first, second], at: monday(9))
+    engine.handle(.deadlineReached, at: monday(10))
+    engine.handle(.snooze, at: monday(10))
+    #expect(engine.nextDeadline == monday(10, 15))
+    engine.handle(.deadlineReached, at: monday(10, 15))
+    #expect(Set(engine.ringingAlarms.map(\.id)) == [first.id, second.id])
+}
+
+@Test func alarmWithSnoozeOffStopsWhenTheOthersSnooze() {
+    let first = Alarm(hour: 10, minute: 0, snooze: .off)
+    let second = Alarm(hour: 10, minute: 0, snooze: .tenMinutes)
+    var engine = engine(with: [first, second], at: monday(9))
+    engine.handle(.deadlineReached, at: monday(10))
+    engine.handle(.snooze, at: monday(10))
+    #expect(!engine.isRinging)
+    #expect(engine.nextDeadline == monday(10, 10))
+    engine.handle(.deadlineReached, at: monday(10, 10))
+    #expect(engine.ringingAlarms.map(\.id) == [second.id])
+}
+
+@Test func snoozeDoesNothingWhenNoRingingAlarmCanSnooze() {
+    let alarm = Alarm(hour: 10, minute: 0, snooze: .off)
+    var engine = engine(with: [alarm], at: monday(9))
+    engine.handle(.deadlineReached, at: monday(10))
+    engine.handle(.snooze, at: monday(10))
+    #expect(engine.ringingAlarms.map(\.id) == [alarm.id])
+    #expect(AlarmSnooze.length(forRinging: engine.ringingAlarms) == .off)
+}

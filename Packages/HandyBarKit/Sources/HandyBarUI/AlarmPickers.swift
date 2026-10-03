@@ -1,9 +1,6 @@
 import HandyBarAlarm
 import SwiftUI
 
-/// The UserDefaults key for the sound new Alarms start with.
-let defaultAlarmSoundKey = "defaultAlarmSound"
-
 /// A pop-up of Alarm sounds that plays each one as it's picked, with a play/stop button.
 struct SoundPicker: View {
     @Binding var sound: AlarmSound
@@ -39,5 +36,18 @@ struct SoundPicker: View {
                 preview.play(new)
             }
         )
+    }
+}
+
+/// A pop-up of snooze lengths, with Off to hide Snooze while the Alarm rings.
+struct SnoozePicker: View {
+    @Binding var snooze: AlarmSnooze
+
+    var body: some View {
+        Picker("Snooze", selection: $snooze) {
+            ForEach(AlarmSnooze.allCases, id: \.self) { Text($0.title).tag($0) }
+        }
+        .labelsHidden()
+        .fixedSize()
     }
 }

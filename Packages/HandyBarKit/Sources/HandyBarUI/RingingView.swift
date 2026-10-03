@@ -32,11 +32,13 @@ public struct RingingView: View {
             }
 
             HStack(spacing: 10) {
-                Button(action: onSnooze) {
-                    Text("Snooze \(Int(AlarmEngine.snoozeInterval / 60)) min")
-                        .frame(maxWidth: .infinity)
+                let snooze = AlarmSnooze.length(forRinging: alarms)
+                if snooze != .off {
+                    Button(action: onSnooze) {
+                        Text("Snooze \(snooze.title)").frame(maxWidth: .infinity)
+                    }
+                    .keyboardShortcut(.cancelAction)
                 }
-                .keyboardShortcut(.cancelAction)
                 Button(action: onStop) {
                     Text("Stop").frame(maxWidth: .infinity)
                 }

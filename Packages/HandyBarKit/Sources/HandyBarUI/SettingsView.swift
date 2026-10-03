@@ -96,7 +96,8 @@ private struct GeneralPane: View {
 
 private struct AlarmPane: View {
     let preview: AlarmSoundPreview
-    @AppStorage(defaultAlarmSoundKey) private var defaultSound = AlarmSound.beeps
+    @AppStorage(AlarmDefaults.soundKey) private var defaultSound = AlarmSound.beeps
+    @AppStorage(AlarmDefaults.snoozeKey) private var defaultSnooze = AlarmSnooze.fiveMinutes
 
     var body: some View {
         Form {
@@ -104,10 +105,15 @@ private struct AlarmPane: View {
                 LabeledContent("Sound for new Alarms") {
                     SoundPicker(sound: $defaultSound, preview: preview)
                 }
+                LabeledContent("Snooze for new Alarms") {
+                    SnoozePicker(snooze: $defaultSnooze)
+                }
             } footer: {
-                Text("Each Alarm can have its own sound. Click an Alarm in the panel to change it.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Text(
+                    "Each Alarm can have its own sound and snooze. Click an Alarm in the panel to change them."
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)

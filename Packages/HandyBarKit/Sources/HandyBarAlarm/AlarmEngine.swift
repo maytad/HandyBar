@@ -20,7 +20,6 @@ public enum AlarmEvent: Sendable {
 /// It performs no I/O and owns no timers: the caller arms one wall-clock timer for
 /// `nextDeadline` and reports events with the current time.
 public struct AlarmEngine: Sendable {
-    public static let snoozeInterval: TimeInterval = 5 * 60
     public static let ringingLimit: TimeInterval = 15 * 60
     /// How late a deadline may be handled and still ring; later means the Mac slept through it.
     public static let lateTolerance: TimeInterval = 30
@@ -95,11 +94,13 @@ public struct AlarmEngine: Sendable {
         case .stop:
             endRinging()
         case .snooze:
-            guard isRinging else { return }
+            let length = AlarmSnooze.length(forRinging: ringingAlarms)
+            guard length != .off else { return }
             let pending = snooze?.alarmIDs ?? []
+            let snoozing = ringingAlarms.filter { $0.snooze != .off }.map(\.id)
             snooze = PendingSnooze(
-                alarmIDs: pending + ringingIDs.filter { !pending.contains($0) },
-                ringsAt: now.addingTimeInterval(Self.snoozeInterval))
+                alarmIDs: pending + snoozing.filter { !pending.contains($0) },
+                ringsAt: now.addingTimeInterval(TimeInterval(length.minutes * 60)))
             endRinging()
         case .missedAlarmsSeen:
             missedIDs.removeAll()
