@@ -114,15 +114,22 @@ public struct AlarmEngine: Sendable {
         case .delete(let id):
             alarms.removeAll { $0.id == id }
             missedIDs.remove(id)
-            removeFromSnooze(id)
-            ringingIDs.removeAll { $0 == id }
-            if ringingIDs.isEmpty { endRinging() }
+            silence(id)
         case .setEnabled(let id, let isEnabled):
             guard let index = alarms.firstIndex(where: { $0.id == id }) else { return }
             var alarm = alarms[index]
             alarm.isEnabled = isEnabled
             alarms[index] = scheduled(alarm, after: now)
+            if !isEnabled { silence(id) }
         }
+    }
+
+    /// Stops an Alarm ringing now or after a snooze, leaving any others ringing.
+    private mutating func silence(_ id: Alarm.ID) {
+        removeFromSnooze(id)
+        let wasRinging = isRinging
+        ringingIDs.removeAll { $0 == id }
+        if wasRinging, ringingIDs.isEmpty { endRinging() }
     }
 
     private mutating func evaluate(at now: Date, mayRing: Bool) {

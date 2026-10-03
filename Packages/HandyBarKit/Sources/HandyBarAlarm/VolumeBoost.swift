@@ -30,7 +30,12 @@ public struct VolumeBoost: Equatable {
     public static func begin(on output: OutputVolumeControl) -> VolumeBoost? {
         guard let original = output.currentVolume() else { return nil }
         let applied = OutputVolume(level: max(original.level, minimumLevel), isMuted: false)
-        guard applied != original, output.setVolume(applied) else { return nil }
+        guard applied != original else { return nil }
+        guard output.setVolume(applied) else {
+            // A device can take the unmute and then refuse the level.
+            _ = output.setVolume(original)
+            return nil
+        }
         return VolumeBoost(original: original, applied: applied)
     }
 

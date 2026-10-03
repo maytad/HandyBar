@@ -43,6 +43,10 @@ public final class AlarmSoundPlayer {
 @Observable
 public final class AlarmSoundPreview {
     public private(set) var playing: AlarmSound?
+    /// True while an Alarm rings, so a preview never plays over it.
+    public var isBlocked = false {
+        didSet { if isBlocked { stop() } }
+    }
 
     @ObservationIgnored private let player = AlarmSoundPlayer()
     @ObservationIgnored private var finish: Task<Void, Never>?
@@ -50,6 +54,7 @@ public final class AlarmSoundPreview {
     public init() {}
 
     public func play(_ sound: AlarmSound) {
+        guard !isBlocked else { return }
         let times = 2
         player.play(sound, times: times)
         playing = sound

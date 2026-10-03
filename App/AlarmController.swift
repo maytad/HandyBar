@@ -9,8 +9,10 @@ final class AlarmController {
     let model = AlarmPanelModel()
     /// Called when the first Alarm is created; used to suggest Open at login.
     var onFirstAlarmCreated: (() -> Void)?
-    /// Called whenever the set of Missed Alarms becomes empty or non-empty.
-    var onMissedChange: ((Bool) -> Void)?
+    /// Called when the menu bar's Missed Alarm dot should appear or disappear.
+    var onMissedDotChange: ((Bool) -> Void)?
+    /// The dot shows Missed Alarms the user hasn't opened the panel to see.
+    private(set) var showsMissedDot = false
 
     private var engine: AlarmEngine
     private let store: AlarmStore
@@ -18,6 +20,9 @@ final class AlarmController {
     private var timer: DispatchSourceTimer?
     private var armedDeadline: Date?
     private var observers: [(NotificationCenter, NSObjectProtocol)] = []
+    /// False when an unreadable Alarms file couldn't be set aside, so it isn't overwritten.
+    private var canSave = true
+    private var isPanelOpen = false
     private let log = Logger(subsystem: "io.github.maytad.HandyBar", category: "alarm")
 
     init(store: AlarmStore = .standard) {
@@ -27,7 +32,7 @@ final class AlarmController {
             snapshot = try store.load()
         } catch {
             log.error("Could not read Alarms: \(error.localizedDescription, privacy: .public)")
-            Self.setAside(store.fileURL)
+            canSave = Self.setAside(store.fileURL, log: log)
         }
         engine = AlarmEngine(snapshot: snapshot, calendar: .current)
 
@@ -55,29 +60,40 @@ final class AlarmController {
         handle(.launched)
     }
 
-    /// The user has seen the panel, so Missed Alarm marks can be cleared.
+    /// Opening the panel shows Missed Alarms, so the menu bar dot goes away.
+    func panelOpened() {
+        isPanelOpen = true
+        updateMissedDot()
+    }
+
+    /// The user has seen the panel, so Missed Alarm marks on rows can be cleared.
     func panelClosed() {
+        isPanelOpen = false
         model.savePendingEdit()
         model.soundPreview.stop()
-        guard !engine.missedAlarms.isEmpty else { return }
-        handle(.missedAlarmsSeen)
+        if !engine.missedAlarms.isEmpty { handle(.missedAlarmsSeen) }
+        updateMissedDot()
+    }
+
+    private func updateMissedDot() {
+        let shows = !isPanelOpen && !engine.missedAlarms.isEmpty
+        guard shows != showsMissedDot else { return }
+        showsMissedDot = shows
+        onMissedDotChange?(shows)
     }
 
     private func handle(_ event: AlarmEvent) {
         let before = engine.snapshot
-        let hadMissed = !engine.missedAlarms.isEmpty
         engine.handle(event, at: Date())
 
         if engine.snapshot != before { save() }
         model.alarms = engine.alarms
         model.missedIDs = Set(engine.missedAlarms.map(\.id))
         model.ringingIDs = engine.ringingAlarms.map(\.id)
-        if !engine.ringingAlarms.isEmpty { model.soundPreview.stop() }
+        model.soundPreview.isBlocked = engine.isRinging
         ringing.show(engine.ringingAlarms)
         armTimer()
-        if hadMissed != !engine.missedAlarms.isEmpty {
-            onMissedChange?(!engine.missedAlarms.isEmpty)
-        }
+        updateMissedDot()
     }
 
     private func armTimer() {
@@ -106,6 +122,7 @@ final class AlarmController {
     }
 
     private func save() {
+        guard canSave else { return }
         do {
             try store.save(engine.snapshot)
         } catch {
@@ -124,10 +141,17 @@ final class AlarmController {
         observers.append((center, token))
     }
 
-    /// Keeps an unreadable Alarms file instead of overwriting it.
-    private static func setAside(_ url: URL) {
+    /// Keeps an unreadable Alarms file instead of overwriting it; false if it stayed in place.
+    private static func setAside(_ url: URL, log: Logger) -> Bool {
         let backup = url.deletingPathExtension()
             .appendingPathExtension("unreadable-\(Int(Date().timeIntervalSince1970)).json")
-        try? FileManager.default.moveItem(at: url, to: backup)
+        do {
+            try FileManager.default.moveItem(at: url, to: backup)
+            return true
+        } catch {
+            log.error(
+                "Could not set aside Alarms: \(error.localizedDescription, privacy: .public)")
+            return false
+        }
     }
 }

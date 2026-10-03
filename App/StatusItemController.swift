@@ -31,8 +31,8 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
             button.action = #selector(togglePopover(_:))
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
-        setIcon(showsMissedDot: !alarms.model.missedIDs.isEmpty)
-        alarms.onMissedChange = { [weak self] in self?.setIcon(showsMissedDot: $0) }
+        setIcon(showsMissedDot: alarms.showsMissedDot)
+        alarms.onMissedDotChange = { [weak self] in self?.setIcon(showsMissedDot: $0) }
     }
 
     private func setIcon(showsMissedDot: Bool) {
@@ -107,6 +107,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         popover.contentViewController = hostingController
         popover.animates = true
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        alarms.panelOpened()
         NSApp.activate()
         popover.contentViewController?.view.window?.makeKey()
     }

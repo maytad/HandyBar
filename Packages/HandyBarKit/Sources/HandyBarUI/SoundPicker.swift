@@ -25,6 +25,7 @@ struct SoundPicker: View {
                     .frame(width: 16, height: 16)
             }
             .buttonStyle(.borderless)
+            .disabled(preview.isBlocked)
             .help(isPlaying ? "Stop" : "Play \(sound.title)")
             .accessibilityLabel(isPlaying ? "Stop Sound" : "Play \(sound.title)")
         }

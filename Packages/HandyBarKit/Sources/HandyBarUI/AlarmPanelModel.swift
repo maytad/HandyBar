@@ -19,8 +19,6 @@ public final class AlarmPanelModel {
 
     public init() {}
 
-    public var hasMissedAlarms: Bool { !missedIDs.isEmpty }
-
     public var ringingAlarms: [Alarm] {
         ringingIDs.compactMap { id in alarms.first { $0.id == id } }
     }

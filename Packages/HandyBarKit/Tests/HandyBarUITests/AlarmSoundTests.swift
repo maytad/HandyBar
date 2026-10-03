@@ -32,3 +32,16 @@ func soundStartsAndEndsSilentSoItLoopsWithoutAClick(sound: AlarmSound) {
     #expect(Set(all.map { $0.hashValue }).count == all.count)
     #expect(Set(AlarmSound.allCases.map(\.title)).count == AlarmSound.allCases.count)
 }
+
+@MainActor @Test func previewIsSilentWhileAnAlarmRings() {
+    let preview = AlarmSoundPreview()
+    preview.play(.chime)
+    preview.isBlocked = true
+    #expect(preview.playing == nil)
+    preview.play(.rising)
+    #expect(preview.playing == nil)
+    preview.isBlocked = false
+    preview.play(.rising)
+    #expect(preview.playing == .rising)
+    preview.stop()
+}

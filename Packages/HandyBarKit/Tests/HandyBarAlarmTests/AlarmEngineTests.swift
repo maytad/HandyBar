@@ -346,3 +346,25 @@ private func engine(with alarms: [Alarm], at now: Date) -> AlarmEngine {
     #expect(engine.ringingAlarms.isEmpty)
     #expect(engine.missedAlarms.map(\.id) == [alarm.id])
 }
+
+@Test func switchingOffARingingAlarmStopsIt() {
+    let first = Alarm(hour: 10, minute: 0, repeatDays: [.monday])
+    let second = Alarm(hour: 10, minute: 0, repeatDays: [.monday])
+    var engine = engine(with: [first, second], at: monday(9))
+    engine.handle(.deadlineReached, at: monday(10))
+    engine.handle(.setEnabled(first.id, false), at: monday(10, 1))
+    #expect(engine.ringingAlarms.map(\.id) == [second.id])
+    engine.handle(.setEnabled(second.id, false), at: monday(10, 1))
+    #expect(!engine.isRinging)
+}
+
+@Test func switchingOffASnoozedAlarmCancelsItsSnooze() {
+    let alarm = Alarm(hour: 10, minute: 0, repeatDays: [.monday])
+    var engine = engine(with: [alarm], at: monday(9))
+    engine.handle(.deadlineReached, at: monday(10))
+    engine.handle(.snooze, at: monday(10))
+    engine.handle(.setEnabled(alarm.id, false), at: monday(10, 1))
+    engine.handle(.deadlineReached, at: monday(10, 5))
+    #expect(!engine.isRinging)
+    #expect(engine.nextDeadline == nil)
+}

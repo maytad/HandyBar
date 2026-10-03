@@ -4,6 +4,8 @@ import Testing
 private final class FakeOutput: OutputVolumeControl {
     var volume: OutputVolume?
     var isSettable = true
+    /// Like a device whose mute can be set but whose level write fails.
+    var levelIsSettable = true
     private(set) var writes: [OutputVolume] = []
 
     init(_ volume: OutputVolume?) { self.volume = volume }
@@ -13,6 +15,10 @@ private final class FakeOutput: OutputVolumeControl {
     func setVolume(_ newVolume: OutputVolume) -> Bool {
         guard isSettable else { return false }
         writes.append(newVolume)
+        guard levelIsSettable else {
+            volume?.isMuted = newVolume.isMuted
+            return false
+        }
         volume = newVolume
         return true
     }
@@ -73,4 +79,11 @@ private final class FakeOutput: OutputVolumeControl {
     unsettable.isSettable = false
     #expect(VolumeBoost.begin(on: unsettable) == nil)
     #expect(unsettable.volume == OutputVolume(level: 0.1, isMuted: false))
+}
+
+@MainActor @Test func failedRaiseLeavesTheOutputAsItWas() {
+    let output = FakeOutput(OutputVolume(level: 0.1, isMuted: true))
+    output.levelIsSettable = false
+    #expect(VolumeBoost.begin(on: output) == nil)
+    #expect(output.volume == OutputVolume(level: 0.1, isMuted: true))
 }
