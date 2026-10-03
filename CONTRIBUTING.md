@@ -59,6 +59,7 @@ work must not use polling or always-running timers.
 | Build | Mac | Footprint | CPU | Idle wakeups |
 | --- | --- | --- | --- | --- |
 | Walking skeleton, Release | Apple silicon, macOS 27.0 | 16 MB | 0.0% | 1 (10 s sample) |
+| Alarm, 5 Alarms set, Release | Apple silicon, macOS 27.0 | 15 MB | 0.0% | 0 (10–20 s samples) |
 
 ### Releases
 

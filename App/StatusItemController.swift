@@ -7,25 +7,84 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     private let popover = NSPopover()
     private var toggle = PanelToggle()
+    private let alarms: AlarmController
+    private let features: FeaturePreferences
+    private let openAtLogin: OpenAtLoginModel
+    private let settings: SettingsWindowController
 
-    override init() {
+    init(
+        alarms: AlarmController,
+        features: FeaturePreferences,
+        openAtLogin: OpenAtLoginModel,
+        settings: SettingsWindowController
+    ) {
+        self.alarms = alarms
+        self.features = features
+        self.openAtLogin = openAtLogin
+        self.settings = settings
         super.init()
         popover.behavior = .transient
         popover.delegate = self
 
         if let button = statusItem.button {
-            let image = NSImage(named: "MenuBarIcon")
-            image?.isTemplate = true
-            image?.size = NSSize(width: 18, height: 18)
-            image?.accessibilityDescription = "HandyBar"
-            button.image = image
             button.target = self
             button.action = #selector(togglePopover(_:))
+            button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
+        setIcon(showsMissedDot: alarms.showsMissedDot)
+        alarms.onMissedDotChange = { [weak self] in self?.setIcon(showsMissedDot: $0) }
+    }
+
+    private func setIcon(showsMissedDot: Bool) {
+        guard let base = NSImage(named: "MenuBarIcon") else { return }
+        let size = NSSize(width: 18, height: 18)
+        let image = NSImage(size: size, flipped: false) { rect in
+            base.draw(in: rect)
+            if showsMissedDot {
+                NSBezierPath(
+                    ovalIn: NSRect(x: rect.maxX - 6, y: rect.maxY - 6, width: 6, height: 6)
+                ).fill()
+            }
+            return true
+        }
+        image.isTemplate = true
+        image.accessibilityDescription = showsMissedDot ? "HandyBar, Missed Alarm" : "HandyBar"
+        statusItem.button?.image = image
     }
 
     @objc private func togglePopover(_ sender: NSStatusBarButton) {
-        perform(toggle.click())
+        let event = NSApp.currentEvent
+        if event?.type == .rightMouseUp || event?.modifierFlags.contains(.control) == true {
+            showMenu()
+        } else {
+            perform(toggle.click())
+        }
+    }
+
+    private func showMenu() {
+        if popover.isShown { popover.performClose(nil) }
+        let menu = NSMenu()
+        menu.addItem(withTitle: "About HandyBar", action: #selector(showAbout), keyEquivalent: "")
+            .target = self
+        menu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
+            .target = self
+        menu.addItem(.separator())
+        menu.addItem(
+            withTitle: "Quit HandyBar", action: #selector(NSApplication.terminate(_:)),
+            keyEquivalent: "q")
+        statusItem.menu = menu
+        statusItem.button?.performClick(nil)
+        statusItem.menu = nil
+    }
+
+    @objc private func openSettings() {
+        if popover.isShown { popover.performClose(nil) }
+        settings.show()
+    }
+
+    @objc private func showAbout() {
+        NSApp.activate()
+        NSApp.orderFrontStandardAboutPanel(nil)
     }
 
     private func perform(_ command: PanelToggle.Command) {
@@ -39,13 +98,18 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     private func showPopover() {
         guard let button = statusItem.button else { return }
         let hostingController = NSHostingController(
-            rootView: PanelView(onQuit: { NSApp.terminate(nil) })
+            rootView: PanelView(
+                features: features, alarms: alarms.model, openAtLogin: openAtLogin,
+                onOpenSettings: { [weak self] in self?.openSettings() },
+                onQuit: { NSApp.terminate(nil) })
         )
         hostingController.sizingOptions = .preferredContentSize
         popover.contentViewController = hostingController
         popover.animates = true
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        alarms.panelOpened()
         NSApp.activate()
+        popover.contentViewController?.view.window?.makeKey()
     }
 
     func popoverShouldClose(_ popover: NSPopover) -> Bool {
@@ -62,6 +126,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     func popoverDidClose(_ notification: Notification) {
         // Release the SwiftUI hierarchy so a closed panel holds no view state.
         popover.contentViewController = nil
+        alarms.panelClosed()
         perform(toggle.didClose())
     }
 }

@@ -10,8 +10,8 @@ A macOS menu bar app that brings three everyday utilities into one place.
 ## Status
 
 HandyBar is an open-source project in early development. The app runs as a
-menu bar item and lists the three features, but none of them work yet, and
-there is no supported release.
+menu bar item. Alarm works; Auto Click and Cleanup do not yet, and there is no
+supported release.
 
 ## Platform
 

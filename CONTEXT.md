@@ -12,7 +12,7 @@ _Avoid_: Timer, countdown, reminder
 The weekdays on which an Alarm rings again; an Alarm with no repeat days rings once.
 
 **Ringing**:
-An Alarm whose time has arrived while the Mac is awake: HandyBar shows it above other windows and plays its sound until the user stops it.
+An Alarm whose time has arrived while the Mac is awake: HandyBar shows it above other windows and plays its sound (one of HandyBar's built-in sounds, chosen per Alarm) until the user stops it.
 
 **Missed Alarm**:
 An Alarm whose time passed while the Mac was asleep or HandyBar was not running. It never rings late; HandyBar shows that it was missed.

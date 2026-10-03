@@ -19,7 +19,9 @@ version. Verify them on supported macOS versions before documenting them as fina
 ## Alarm
 
 An Alarm rings only while the Mac is awake and HandyBar is running, including
-during Focus or Do Not Disturb. The ringing window must not take keyboard focus.
+during Focus or Do Not Disturb. The ringing window must not take keyboard focus
+when it appears; it takes focus only when the user clicks it, so that Return and
+Escape can stop or snooze the Alarm.
 
 While an Alarm rings, if the default output device is muted or below 50% volume,
 HandyBar unmutes it and sets it to 50%. When ringing ends, HandyBar restores the
@@ -27,8 +29,10 @@ previous volume and mute state, unless the user changed the volume while it rang
 Devices whose volume cannot be set are left unchanged. HandyBar changes no other
 system settings.
 
-Open at login stays off until the user turns it on. HandyBar may suggest it when
-the user creates their first Alarm, but must not enable it without that choice.
+Open at login stays off until the user turns it on in Settings > General. HandyBar
+suggests it once, when the user creates their first Alarm, but must not enable it
+without that choice. It uses the system login item for HandyBar itself, with no
+helper app or launch agent; macOS shows a notice when it is added.
 
 ## Auto Click
 
@@ -57,6 +61,17 @@ behavior before release; do not promise that every deleted file can be restored.
 The initial design keeps alarm and auto-click settings locally on the Mac.
 Accounts, cloud synchronization, analytics, and telemetry are outside the initial
 scope. Specify the actual storage location and deletion procedure once implemented.
+
+Alarms, including labels, sounds, snooze lengths, and which Alarms were missed, are stored in
+`~/Library/Application Support/HandyBar/alarms.json`. To delete them, quit
+HandyBar and remove that folder. If the file cannot be read, HandyBar renames it
+to `alarms.unreadable-<timestamp>.json` in the same folder instead of overwriting it. If it can't be renamed, HandyBar leaves it in place and saves no Alarm changes until it is relaunched.
+
+HandyBar's user defaults hold the last opened feature, the order and visibility of
+features in the panel, the last Settings pane, the sound and snooze length for new Alarms, and whether the Open at login
+suggestion was shown. `defaults delete io.github.maytad.HandyBar` removes them.
+The login item itself is managed by macOS; turn it off in HandyBar's Settings or in
+System Settings > General > Login Items.
 
 Command output may contain local paths or other personal information. Keep any
 captured output local, avoid logging secrets, and require deliberate user action
