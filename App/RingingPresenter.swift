@@ -10,7 +10,8 @@ final class RingingPresenter {
     var onSnooze: () -> Void = {}
 
     private var panel: RingingPanel?
-    private var sound: AlarmSoundPlayer?
+    private let player = AlarmSoundPlayer()
+    private var playingSound: AlarmSound?
     private var volumeBoost: VolumeBoost?
     private let output = SystemOutputVolume()
     private var shownAlarms: [Alarm] = []
@@ -35,15 +36,17 @@ final class RingingPresenter {
             panel.present()
             self.panel = panel
             volumeBoost = VolumeBoost.begin(on: output)
-            let sound = AlarmSoundPlayer()
-            sound.play(alarms[0].sound)
-            self.sound = sound
+        }
+        // The first Alarm can change while Ringing, when it's deleted, switched off, or edited.
+        if alarms[0].sound != playingSound {
+            player.play(alarms[0].sound)
+            playingSound = alarms[0].sound
         }
     }
 
     private func stop() {
-        sound?.stop()
-        sound = nil
+        player.stop()
+        playingSound = nil
         volumeBoost?.end(on: output)
         volumeBoost = nil
         panel?.close()
