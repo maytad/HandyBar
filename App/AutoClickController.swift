@@ -1,4 +1,5 @@
 import AppKit
+import Carbon
 import CoreGraphics
 import HandyBarAutoClick
 import HandyBarUI
@@ -16,6 +17,8 @@ final class AutoClickController {
     private var globalKeyMonitor: Any?
     private var localKeyMonitor: Any?
     private var baselineMouseLocation: CGPoint?
+    private var hotKeyID: EventHotKeyID?
+    nonisolated(unsafe) private var hotKeyRef: EventHotKeyRef?
     private let log = Logger(subsystem: "io.github.maytad.HandyBar", category: "autoclick")
 
     init() {
@@ -33,6 +36,12 @@ final class AutoClickController {
         }
         model.onStop = { [weak self] in self?.stop() }
         model.onRequestPermission = { [weak self] in self?.requestPermissionIfNeeded() }
+
+        registerHotKey()
+    }
+
+    deinit {
+        unregisterHotKey()
     }
 
     func panelOpened() {
@@ -49,9 +58,89 @@ final class AutoClickController {
         model.clicksDone = engine.clicksDone
     }
 
-    var isRunning: Bool { engine.isRunning }
-    var clicksDone: Int { engine.clicksDone }
-    var stopReason: StopReason? { engine.stopReason }
+    // MARK: - Hot Key (⌥⌘C)
+
+    private func registerHotKey() {
+        var hotKeyID = EventHotKeyID()
+        hotKeyID.signature = OSType(0x48424143) // "HBAC"
+        hotKeyID.id = 1
+        self.hotKeyID = hotKeyID
+
+        var eventType = EventTypeSpec()
+        eventType.eventClass = OSType(kEventClassKeyboard)
+        eventType.eventKind = OSType(kEventHotKeyPressed)
+
+        let handler: EventHandlerUPP = { _, event, userData in
+            guard let userData else { return OSStatus(eventNotHandledErr) }
+            let controller = Unmanaged<AutoClickController>.fromOpaque(userData).takeUnretainedValue()
+
+            var hotKeyID = EventHotKeyID()
+            let status = GetEventParameter(
+                event,
+                EventParamName(kEventParamDirectObject),
+                EventParamType(typeEventHotKeyID),
+                nil,
+                MemoryLayout<EventHotKeyID>.size,
+                nil,
+                &hotKeyID
+            )
+
+            if status == noErr {
+                Task { @MainActor in
+                    controller.toggleAutoClick()
+                }
+            }
+
+            return noErr
+        }
+
+        var eventHandler: EventHandlerRef?
+        InstallEventHandler(
+            GetApplicationEventTarget(),
+            handler,
+            1,
+            &eventType,
+            UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque()),
+            &eventHandler
+        )
+
+        var ref: EventHotKeyRef?
+        let status = RegisterEventHotKey(
+            UInt32(kVK_ANSI_C),  // C key
+            UInt32(optionKey | cmdKey),  // ⌥⌘
+            hotKeyID,
+            GetApplicationEventTarget(),
+            0,
+            &ref
+        )
+
+        if status == noErr {
+            hotKeyRef = ref
+            log.info("Hot key ⌥⌘C registered")
+        } else {
+            log.warning("Failed to register hot key: \(status)")
+        }
+    }
+
+    private nonisolated func unregisterHotKey() {
+        if let ref = hotKeyRef {
+            UnregisterEventHotKey(ref)
+        }
+    }
+
+    private func toggleAutoClick() {
+        if engine.isRunning {
+            stop()
+        } else if model.hasPermission {
+            model.onStart?()
+        }
+    }
+
+    // MARK: - Permissions
+
+    private func hasPostEventAccess() -> Bool {
+        CGPreflightPostEventAccess()
+    }
 
     func start() {
         guard hasPostEventAccess() else {
@@ -61,6 +150,7 @@ final class AutoClickController {
 
         let poster = CGClickPoster()
         engine.handle(.start(Date()), poster: poster)
+        updateModel()
 
         // Hold activity to opt out of App Nap
         activity = ProcessInfo.processInfo.beginActivity(
@@ -79,12 +169,9 @@ final class AutoClickController {
     func stop() {
         let poster = CGClickPoster()
         engine.handle(.stop, poster: poster)
+        updateModel()
         tearDown()
         log.info("Auto Click stopped: \(String(describing: self.engine.stopReason))")
-    }
-
-    private func hasPostEventAccess() -> Bool {
-        CGPreflightPostEventAccess()
     }
 
     func requestPermissionIfNeeded() {
