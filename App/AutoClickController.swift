@@ -16,6 +16,8 @@ final class AutoClickController {
     private var globalMouseMonitor: Any?
     private var globalKeyMonitor: Any?
     private var localKeyMonitor: Any?
+    private var sleepObserver: Any?
+    private var sessionObserver: Any?
     private var baselineMouseLocation: CGPoint?
     private var hotKeyID: EventHotKeyID?
     nonisolated(unsafe) private var hotKeyRef: EventHotKeyRef?
@@ -235,6 +237,27 @@ final class AutoClickController {
             }
             return event
         }
+
+        // Monitor sleep and screen lock
+        sleepObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.willSleepNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.stop()
+            }
+        }
+
+        sessionObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.sessionDidResignActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.stop()
+            }
+        }
     }
 
     private func checkMouseMove(_ event: NSEvent) {
@@ -286,6 +309,16 @@ final class AutoClickController {
         if let monitor = localKeyMonitor {
             NSEvent.removeMonitor(monitor)
             localKeyMonitor = nil
+        }
+
+        if let observer = sleepObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+            sleepObserver = nil
+        }
+
+        if let observer = sessionObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+            sessionObserver = nil
         }
 
         baselineMouseLocation = nil

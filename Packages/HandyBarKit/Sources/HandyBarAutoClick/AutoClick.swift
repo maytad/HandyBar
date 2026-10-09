@@ -25,13 +25,9 @@ public struct AutoClickSettings: Sendable, Equatable {
 }
 
 /// A click command emitted by the engine.
+/// The click is posted at the current cursor position.
 public struct Click: Sendable, Equatable {
-    /// Target position in screen coordinates (top-left origin).
-    public var position: CGPoint
-
-    public init(position: CGPoint) {
-        self.position = position
-    }
+    public init() {}
 }
 
 /// Protocol for posting clicks to the system.
@@ -101,11 +97,11 @@ public struct AutoClickEngine: Sendable {
             state = .running(clicksDone: 0, startTime: now, nextTickAt: now.addingTimeInterval(interval))
             lastClicksDone = 0
 
-        case .tick(let now):
+        case .tick:
             guard case .running(let done, let startTime, _) = state else { return }
 
-            // Post click at current cursor position (placeholder: 0,0)
-            poster.post(Click(position: CGPoint(x: 0, y: 0)))
+            // Post click at current cursor position
+            poster.post(Click())
             let newDone = done + 1
 
             // Check if limit reached
