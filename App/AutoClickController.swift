@@ -186,8 +186,12 @@ final class AutoClickController {
 
     func requestPermissionIfNeeded() {
         guard !hasPostEventAccess() else { return }
-        // Open System Settings > Privacy & Security > Accessibility
-        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
+        // Show system prompt to grant Accessibility permission
+        CGRequestPostEventAccess()
+        // Update permission status after user returns
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            self?.model.hasPermission = self?.hasPostEventAccess() ?? false
+        }
     }
 
     private func armTimer() {
