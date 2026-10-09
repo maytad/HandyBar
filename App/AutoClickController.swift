@@ -133,8 +133,15 @@ final class AutoClickController {
     private func toggleAutoClick() {
         if engine.isRunning {
             stop()
+            NSSound.beep()
+            log.info("Auto Click stopped via hot key")
         } else if model.hasPermission {
             model.onStart?()
+            NSSound.beep()
+            log.info("Auto Click started via hot key")
+        } else {
+            NSSound.beep()
+            log.warning("Auto Click hot key pressed but no permission")
         }
     }
 
