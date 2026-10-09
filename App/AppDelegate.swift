@@ -5,6 +5,7 @@ import HandyBarUI
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var alarmController: AlarmController?
+    private var autoClickController: AutoClickController?
     private var settingsController: SettingsWindowController?
     private var statusItemController: StatusItemController?
 
@@ -20,12 +21,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let openAtLogin = OpenAtLoginModel(service: SystemLoginItem())
         let alarms = AlarmController()
         alarms.onFirstAlarmCreated = { openAtLogin.firstAlarmCreated() }
+        let autoClick = AutoClickController()
         let settings = SettingsWindowController(
             features: features, openAtLogin: openAtLogin, soundPreview: alarms.model.soundPreview)
 
         alarmController = alarms
+        autoClickController = autoClick
         settingsController = settings
         statusItemController = StatusItemController(
-            alarms: alarms, features: features, openAtLogin: openAtLogin, settings: settings)
+            alarms: alarms, autoClick: autoClick, features: features, openAtLogin: openAtLogin,
+            settings: settings)
     }
 }

@@ -8,17 +8,20 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     private let popover = NSPopover()
     private var toggle = PanelToggle()
     private let alarms: AlarmController
+    private let autoClick: AutoClickController
     private let features: FeaturePreferences
     private let openAtLogin: OpenAtLoginModel
     private let settings: SettingsWindowController
 
     init(
         alarms: AlarmController,
+        autoClick: AutoClickController,
         features: FeaturePreferences,
         openAtLogin: OpenAtLoginModel,
         settings: SettingsWindowController
     ) {
         self.alarms = alarms
+        self.autoClick = autoClick
         self.features = features
         self.openAtLogin = openAtLogin
         self.settings = settings
@@ -99,7 +102,10 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         guard let button = statusItem.button else { return }
         let hostingController = NSHostingController(
             rootView: PanelView(
-                features: features, alarms: alarms.model, openAtLogin: openAtLogin,
+                features: features,
+                alarms: alarms.model,
+                autoClick: autoClick.model,
+                openAtLogin: openAtLogin,
                 onOpenSettings: { [weak self] in self?.openSettings() },
                 onQuit: { NSApp.terminate(nil) })
         )
@@ -108,6 +114,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         popover.animates = true
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         alarms.panelOpened()
+        autoClick.panelOpened()
         NSApp.activate()
         popover.contentViewController?.view.window?.makeKey()
     }
@@ -127,6 +134,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         // Release the SwiftUI hierarchy so a closed panel holds no view state.
         popover.contentViewController = nil
         alarms.panelClosed()
+        autoClick.panelClosed()
         perform(toggle.didClose())
     }
 }

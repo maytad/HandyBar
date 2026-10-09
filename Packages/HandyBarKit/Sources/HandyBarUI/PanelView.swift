@@ -9,6 +9,7 @@ public struct PanelView: View {
 
     private let features: FeaturePreferences
     private let alarms: AlarmPanelModel
+    private let autoClick: AutoClickPanelModel
     private let openAtLogin: OpenAtLoginModel
     private let onOpenSettings: () -> Void
     private let onQuit: () -> Void
@@ -16,12 +17,14 @@ public struct PanelView: View {
     public init(
         features: FeaturePreferences,
         alarms: AlarmPanelModel,
+        autoClick: AutoClickPanelModel,
         openAtLogin: OpenAtLoginModel,
         onOpenSettings: @escaping () -> Void,
         onQuit: @escaping () -> Void
     ) {
         self.features = features
         self.alarms = alarms
+        self.autoClick = autoClick
         self.openAtLogin = openAtLogin
         self.onOpenSettings = onOpenSettings
         self.onQuit = onQuit
@@ -84,6 +87,7 @@ public struct PanelView: View {
     private func status(of entry: FeatureEntry) -> FeatureStatus {
         switch entry.title {
         case "Alarm": AlarmStatus(alarms).feature
+        case "Auto Click": AutoClickStatus(autoClick).feature
         default: FeatureStatus(text: "Coming soon")
         }
     }
@@ -100,6 +104,8 @@ public struct PanelView: View {
             switch entry.title {
             case "Alarm":
                 AlarmView(model: alarms, openAtLogin: openAtLogin)
+            case "Auto Click":
+                AutoClickView(model: autoClick)
             default:
                 comingSoon(entry)
             }
@@ -222,6 +228,25 @@ struct AlarmStatus {
             (text, isAlert) = ("No Alarms", false)
         } else {
             (text, isAlert) = ("All off", false)
+        }
+    }
+}
+
+/// The one-line summary of Auto Click.
+struct AutoClickStatus {
+    let text: String
+    let isAlert: Bool
+
+    var feature: FeatureStatus { FeatureStatus(text: text, isAlert: isAlert) }
+
+    @MainActor
+    init(_ model: AutoClickPanelModel) {
+        if model.isRunning {
+            (text, isAlert) = ("Running · \(model.clicksDone) clicks", true)
+        } else if !model.hasPermission {
+            (text, isAlert) = ("Permission needed", false)
+        } else {
+            (text, isAlert) = ("Ready", false)
         }
     }
 }

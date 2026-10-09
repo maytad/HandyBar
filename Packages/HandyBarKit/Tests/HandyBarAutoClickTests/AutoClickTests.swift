@@ -2,8 +2,8 @@ import Foundation
 import HandyBarAutoClick
 import Testing
 
-@Test func autoClickIsNotAvailableYet() {
-    #expect(AutoClick.isAvailable == false)
+@Test func autoClickIsAvailable() {
+    #expect(AutoClick.isAvailable == true)
 }
 
 // MARK: - Settings

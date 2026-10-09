@@ -5,6 +5,6 @@ import Testing
     #expect(FeatureEntry.all.map(\.title) == ["Alarm", "Auto Click", "Cleanup"])
 }
 
-@Test func onlyAlarmIsAvailable() {
-    #expect(FeatureEntry.all.filter(\.isAvailable).map(\.title) == ["Alarm"])
+@Test func alarmAndAutoClickAreAvailable() {
+    #expect(FeatureEntry.all.filter(\.isAvailable).map(\.title) == ["Alarm", "Auto Click"])
 }

@@ -7,6 +7,8 @@ import os
 /// Connects the Auto Click engine to the system: posts clicks, monitors events, and checks permissions.
 @MainActor
 final class AutoClickController {
+    let model = AutoClickPanelModel()
+
     private var engine: AutoClickEngine
     private var timer: DispatchSourceTimer?
     private var activity: NSObjectProtocol?
@@ -18,6 +20,33 @@ final class AutoClickController {
 
     init() {
         self.engine = AutoClickEngine(settings: AutoClickSettings())
+        model.hasPermission = hasPostEventAccess()
+
+        model.onStart = { [weak self] in
+            guard let self else { return }
+            let settings = AutoClickSettings(
+                intervalMilliseconds: model.intervalMilliseconds,
+                clickLimit: model.clickLimit
+            )
+            engine = AutoClickEngine(settings: settings)
+            start()
+        }
+        model.onStop = { [weak self] in self?.stop() }
+        model.onRequestPermission = { [weak self] in self?.requestPermissionIfNeeded() }
+    }
+
+    func panelOpened() {
+        model.hasPermission = hasPostEventAccess()
+        updateModel()
+    }
+
+    func panelClosed() {
+        // Keep running if active
+    }
+
+    private func updateModel() {
+        model.isRunning = engine.isRunning
+        model.clicksDone = engine.clicksDone
     }
 
     var isRunning: Bool { engine.isRunning }
@@ -85,6 +114,7 @@ final class AutoClickController {
 
         let poster = CGClickPoster()
         engine.handle(.tick(Date()), poster: poster)
+        updateModel()
 
         if engine.isRunning {
             armTimer()
