@@ -20,7 +20,7 @@ public struct AutoClickSettings: Sendable, Equatable {
 
     public init(intervalMilliseconds: Int = 100, clickLimit: Int = 100) {
         self.intervalMilliseconds = max(Self.minimumInterval, min(intervalMilliseconds, Self.maximumInterval))
-        self.clickLimit = max(0, clickLimit)
+        self.clickLimit = max(0, min(clickLimit, 1000))
     }
 }
 

@@ -19,6 +19,7 @@ final class AutoClickController {
     private var sleepObserver: Any?
     private var sessionObserver: Any?
     private var baselineMouseLocation: CGPoint?
+    private let escKeyCode: UInt16 = 53  // Esc key from Carbon Events
     private var hotKeyID: EventHotKeyID?
     nonisolated(unsafe) private var hotKeyRef: EventHotKeyRef?
     private let log = Logger(subsystem: "io.github.maytad.HandyBar", category: "autoclick")
@@ -230,7 +231,7 @@ final class AutoClickController {
         // Monitor Esc key globally
         globalKeyMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.keyDown]) {
             [weak self] event in
-            if event.keyCode == 53 { // Esc
+            if event.keyCode == self?.escKeyCode {
                 self?.stop()
             }
         }
@@ -238,7 +239,7 @@ final class AutoClickController {
         // Monitor Esc key locally (in HandyBar's own windows)
         localKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) {
             [weak self] event in
-            if event.keyCode == 53 { // Esc
+            if event.keyCode == self?.escKeyCode {
                 self?.stop()
                 return nil
             }
